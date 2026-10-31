@@ -8,7 +8,9 @@ import {
   FiTrash2,
   FiClock,
   FiCpu,
-  FiStar
+  FiStar,
+  FiChevronDown,
+  FiChevronUp
 } from "react-icons/fi";
 
 const STATUS_COLORS = {
@@ -48,204 +50,210 @@ export default function ProblemCard({
 
   return (
     <div
-      className={`rounded-2xl border transition-all duration-200 overflow-hidden shadow-sm hover:shadow-md ${
+      className={`rounded-xl border transition-all duration-150 overflow-hidden shadow-xs hover:border-neutral-400 dark:hover:border-neutral-700 ${
         darkMode ? "bg-neutral-900 border-neutral-800" : "bg-white border-neutral-200"
       }`}
     >
-      {/* Top Header */}
-      <div className="p-4 sm:p-5 flex flex-col gap-3">
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 flex-wrap mb-1.5">
-              {/* Difficulty */}
-              <span
-                className={`text-[10px] font-bold px-2 py-0.5 rounded-md border uppercase tracking-wider ${
-                  DIFFICULTY_COLORS[problem.difficulty]
-                }`}
-              >
-                {problem.difficulty}
-              </span>
+      {/* Compact Main Row */}
+      <div className="p-3 sm:px-4 sm:py-3 flex items-center justify-between gap-3">
+        {/* Left: Star + Title + Badges */}
+        <div className="flex items-center gap-2.5 min-w-0 flex-1">
+          <button
+            onClick={() => onToggleFavorite(problem._id)}
+            className={`p-1 rounded-md transition shrink-0 ${
+              problem.isFavorite
+                ? "text-amber-500"
+                : "text-neutral-300 dark:text-neutral-700 hover:text-amber-500"
+            }`}
+            title="Bookmark"
+          >
+            <FiStar className={`w-3.5 h-3.5 ${problem.isFavorite ? "fill-amber-500" : ""}`} />
+          </button>
 
-              {/* Status Selector */}
-              <select
-                value={problem.status}
-                onChange={(e) => onStatusChange(problem._id, e.target.value)}
-                className={`text-[11px] font-semibold px-2 py-0.5 rounded-md border outline-none cursor-pointer ${
-                  STATUS_COLORS[problem.status]
-                }`}
-              >
-                {["Todo", "Attempted", "Understood", "Solved", "Must Revise", "Mastered"].map((s) => (
-                  <option key={s} value={s} className="bg-neutral-900 text-white">
-                    {s}
-                  </option>
-                ))}
-              </select>
+          {/* Difficulty pill */}
+          <span
+            className={`text-[9px] font-bold px-1.5 py-0.5 rounded border uppercase tracking-wider shrink-0 ${
+              DIFFICULTY_COLORS[problem.difficulty]
+            }`}
+          >
+            {problem.difficulty}
+          </span>
 
-              {/* Revision count */}
-              {problem.revisionCount > 0 && (
-                <span className="text-[10px] px-2 py-0.5 rounded-md border border-neutral-500/20 text-neutral-400">
-                  {problem.revisionCount}x revised
+          {/* Title */}
+          <h3
+            onClick={() => setIsExpanded(!isExpanded)}
+            className="text-xs font-bold tracking-tight text-neutral-900 dark:text-white truncate cursor-pointer hover:text-indigo-500 transition"
+            title={problem.title}
+          >
+            {problem.title}
+          </h3>
+
+          {/* Tags (zoom-out compact) */}
+          {problem.tags && problem.tags.length > 0 && (
+            <div className="hidden md:flex items-center gap-1 shrink-0">
+              {problem.tags.slice(0, 3).map((tag) => (
+                <span
+                  key={tag._id}
+                  style={{ backgroundColor: `${tag.color}15`, borderColor: `${tag.color}35`, color: tag.color }}
+                  className="text-[9px] font-semibold px-1.5 py-0.2 rounded border truncate max-w-[110px]"
+                >
+                  {tag.name}
                 </span>
+              ))}
+              {problem.tags.length > 3 && (
+                <span className="text-[9px] text-neutral-400 font-medium">+{problem.tags.length - 3}</span>
               )}
             </div>
+          )}
 
-            {/* Problem Title */}
-            <h3 className="text-base font-bold tracking-tight text-neutral-900 dark:text-white truncate">
-              {problem.title}
-            </h3>
-          </div>
-
-          {/* Quick Action Icons */}
-          <div className="flex items-center gap-1.5 shrink-0">
-            <button
-              onClick={() => onToggleFavorite(problem._id)}
-              className={`p-1.5 rounded-lg border transition ${
-                problem.isFavorite
-                  ? "bg-amber-500/10 border-amber-500/30 text-amber-500"
-                  : "border-neutral-200 dark:border-neutral-800 text-neutral-400 hover:text-amber-500"
-              }`}
-              title="Bookmark / Favorite"
-            >
-              <FiStar className={`w-3.5 h-3.5 ${problem.isFavorite ? "fill-amber-500" : ""}`} />
-            </button>
-
-            <button
-              onClick={() => onEdit(problem)}
-              className="p-1.5 rounded-lg border border-neutral-200 dark:border-neutral-800 text-neutral-400 hover:text-indigo-500 transition"
-              title="Edit Problem"
-            >
-              <FiEdit className="w-3.5 h-3.5" />
-            </button>
-
-            <button
-              onClick={() => onDelete(problem._id)}
-              className="p-1.5 rounded-lg border border-neutral-200 dark:border-neutral-800 text-neutral-400 hover:text-rose-500 transition"
-              title="Delete Problem"
-            >
-              <FiTrash2 className="w-3.5 h-3.5" />
-            </button>
-          </div>
-        </div>
-
-        {/* Tags */}
-        {problem.tags && problem.tags.length > 0 && (
-          <div className="flex items-center gap-1.5 flex-wrap">
-            {problem.tags.map((tag) => (
-              <span
-                key={tag._id}
-                style={{ backgroundColor: `${tag.color}15`, borderColor: `${tag.color}40`, color: tag.color }}
-                className="text-[10px] font-semibold px-2 py-0.5 rounded-md border"
-              >
-                {tag.parentGroup ? `${tag.parentGroup} › ${tag.name}` : tag.name}
-              </span>
-            ))}
-          </div>
-        )}
-
-        {/* External Platform Links */}
-        {problem.links && problem.links.length > 0 && (
-          <div className="flex items-center gap-2 flex-wrap pt-1">
-            {problem.links.map((link, idx) => (
-              <a
-                key={idx}
-                href={link.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className={`text-[11px] font-medium px-2.5 py-1 rounded-lg border transition inline-flex items-center gap-1.5 ${
-                  darkMode
-                    ? "bg-neutral-950 border-neutral-800 text-indigo-400 hover:border-neutral-700"
-                    : "bg-neutral-50 border-neutral-200 text-indigo-600 hover:border-neutral-300"
-                }`}
-              >
-                <span>{link.label || link.platform}</span>
-                <FiExternalLink className="w-3 h-3" />
-              </a>
-            ))}
-          </div>
-        )}
-
-        {/* Notes preview */}
-        {problem.personalNotes && (
-          <div className={`text-xs p-2.5 rounded-xl border ${darkMode ? "bg-neutral-950/50 border-neutral-800/80 text-neutral-300" : "bg-neutral-50 border-neutral-200 text-neutral-700"}`}>
-            <span className="font-semibold block text-[10px] uppercase text-neutral-500 mb-0.5">Notes & Pitfalls</span>
-            <p className="line-clamp-2">{problem.personalNotes}</p>
-          </div>
-        )}
-      </div>
-
-      {/* Solutions Accordion / View */}
-      {problem.solutions && problem.solutions.length > 0 && (
-        <div className={`border-t ${darkMode ? "border-neutral-800 bg-neutral-950/40" : "border-neutral-100 bg-neutral-50/50"}`}>
-          {/* Solution Tabs Header */}
-          <div className="flex items-center justify-between px-4 py-2 border-b border-neutral-200 dark:border-neutral-800/80">
-            <div className="flex items-center gap-1.5 overflow-x-auto">
-              <span className="text-[11px] font-semibold text-neutral-400 mr-1 flex items-center gap-1">
-                <FiCode className="w-3.5 h-3.5" /> Solutions:
-              </span>
-              {problem.solutions.map((sol, idx) => (
-                <button
+          {/* Links icons */}
+          {problem.links && problem.links.length > 0 && (
+            <div className="hidden lg:flex items-center gap-1 shrink-0">
+              {problem.links.map((link, idx) => (
+                <a
                   key={idx}
-                  onClick={() => {
-                    setActiveTab(idx);
-                    setIsExpanded(true);
-                  }}
-                  className={`text-[11px] px-2.5 py-0.5 rounded-md font-medium transition ${
-                    activeTab === idx && isExpanded
-                      ? "bg-indigo-600 text-white shadow-sm"
-                      : "text-neutral-500 hover:text-neutral-900 dark:hover:text-white"
-                  }`}
+                  href={link.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="p-1 rounded text-indigo-500 hover:text-indigo-400 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition"
+                  title={`${link.platform}: ${link.url}`}
                 >
-                  {sol.title || `Sol ${idx + 1}`}
-                </button>
+                  <FiExternalLink className="w-3 h-3" />
+                </a>
               ))}
             </div>
+          )}
+        </div>
 
+        {/* Right: Status selector + Quick controls */}
+        <div className="flex items-center gap-2 shrink-0">
+          <select
+            value={problem.status}
+            onChange={(e) => onStatusChange(problem._id, e.target.value)}
+            className={`text-[10px] font-semibold px-2 py-0.5 rounded-md border outline-none cursor-pointer ${
+              STATUS_COLORS[problem.status]
+            }`}
+          >
+            {["Todo", "Attempted", "Understood", "Solved", "Must Revise", "Mastered"].map((s) => (
+              <option key={s} value={s} className="bg-neutral-900 text-white">
+                {s}
+              </option>
+            ))}
+          </select>
+
+          {problem.solutions && problem.solutions.length > 0 && (
             <button
               onClick={() => setIsExpanded(!isExpanded)}
-              className="text-[11px] font-semibold text-indigo-500 hover:underline shrink-0"
+              className="text-[10px] px-2 py-0.5 rounded-md bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300 font-semibold hover:bg-indigo-600 hover:text-white transition flex items-center gap-1"
             >
-              {isExpanded ? "Collapse" : "View Code"}
+              <FiCode className="w-3 h-3" />
+              <span>{problem.solutions.length}</span>
+              {isExpanded ? <FiChevronUp className="w-3 h-3" /> : <FiChevronDown className="w-3 h-3" />}
             </button>
-          </div>
+          )}
 
-          {/* Active Solution Code */}
-          {isExpanded && activeSolution && (
-            <div className="p-4 space-y-2">
-              <div className="flex items-center justify-between text-xs">
-                <div className="flex items-center gap-3">
-                  <span className="text-[10px] uppercase font-bold text-neutral-400 font-mono">
-                    {activeSolution.language}
-                  </span>
-                  {activeSolution.timeComplexity && (
-                    <span className="text-[11px] text-neutral-400 inline-flex items-center gap-1">
-                      <FiClock className="w-3 h-3" /> {activeSolution.timeComplexity}
-                    </span>
-                  )}
-                  {activeSolution.spaceComplexity && (
-                    <span className="text-[11px] text-neutral-400 inline-flex items-center gap-1">
-                      <FiCpu className="w-3 h-3" /> {activeSolution.spaceComplexity}
-                    </span>
-                  )}
+          <button
+            onClick={() => onEdit(problem)}
+            className="p-1 text-neutral-400 hover:text-indigo-500 transition"
+            title="Edit"
+          >
+            <FiEdit className="w-3 h-3" />
+          </button>
+
+          <button
+            onClick={() => onDelete(problem._id)}
+            className="p-1 text-neutral-400 hover:text-rose-500 transition"
+            title="Delete"
+          >
+            <FiTrash2 className="w-3 h-3" />
+          </button>
+        </div>
+      </div>
+
+      {/* Expanded Accordion: Code approaches & Personal Notes */}
+      {isExpanded && (
+        <div className={`border-t p-3 space-y-3 ${darkMode ? "border-neutral-800 bg-neutral-950/60" : "border-neutral-100 bg-neutral-50/70"}`}>
+          {/* External links for mobile or smaller view */}
+          {problem.links && problem.links.length > 0 && (
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-[10px] text-neutral-400 uppercase font-bold">Platform Links:</span>
+              {problem.links.map((link, idx) => (
+                <a
+                  key={idx}
+                  href={link.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[10px] font-medium text-indigo-500 hover:underline inline-flex items-center gap-1"
+                >
+                  <span>{link.label || link.platform}</span>
+                  <FiExternalLink className="w-2.5 h-2.5" />
+                </a>
+              ))}
+            </div>
+          )}
+
+          {/* Notes */}
+          {problem.personalNotes && (
+            <div className={`p-2.5 rounded-lg border text-xs ${darkMode ? "bg-neutral-900 border-neutral-800 text-neutral-300" : "bg-white border-neutral-200 text-neutral-700"}`}>
+              <span className="text-[9px] uppercase font-bold text-neutral-400 block mb-0.5">Key Intuition & Edge Cases:</span>
+              <p className="whitespace-pre-wrap">{problem.personalNotes}</p>
+            </div>
+          )}
+
+          {/* Solution Tabs */}
+          {problem.solutions && problem.solutions.length > 0 && (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between border-b border-neutral-200 dark:border-neutral-800 pb-1.5">
+                <div className="flex items-center gap-1 overflow-x-auto">
+                  {problem.solutions.map((sol, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => setActiveTab(idx)}
+                      className={`text-[10px] px-2.5 py-0.5 rounded font-semibold transition ${
+                        activeTab === idx
+                          ? "bg-indigo-600 text-white"
+                          : "text-neutral-400 hover:text-white"
+                      }`}
+                    >
+                      {sol.title || `Solution ${idx + 1}`}
+                    </button>
+                  ))}
                 </div>
 
                 <button
                   onClick={() => handleCopyCode(activeSolution.code)}
-                  className="px-2.5 py-1 rounded-md text-[11px] font-semibold bg-neutral-200 dark:bg-neutral-800 hover:bg-neutral-300 dark:hover:bg-neutral-700 transition flex items-center gap-1"
+                  className="text-[10px] px-2 py-0.5 rounded bg-neutral-200 dark:bg-neutral-800 hover:bg-neutral-300 dark:hover:bg-neutral-700 font-semibold inline-flex items-center gap-1"
                 >
-                  {copied ? <FiCheck className="w-3 h-3 text-emerald-500" /> : <FiCopy className="w-3 h-3" />}
-                  <span>{copied ? "Copied" : "Copy"}</span>
+                  {copied ? <FiCheck className="w-2.5 h-2.5 text-emerald-500" /> : <FiCopy className="w-2.5 h-2.5" />}
+                  <span>{copied ? "Copied" : "Copy Code"}</span>
                 </button>
               </div>
 
-              {activeSolution.explanation && (
-                <p className="text-xs text-neutral-600 dark:text-neutral-400 italic">
-                  💡 {activeSolution.explanation}
-                </p>
-              )}
+              {activeSolution && (
+                <div className="space-y-1.5">
+                  <div className="flex items-center gap-3 text-[10px] text-neutral-400 font-mono">
+                    <span className="uppercase font-bold text-neutral-300">{activeSolution.language}</span>
+                    {activeSolution.timeComplexity && (
+                      <span className="inline-flex items-center gap-1">
+                        <FiClock className="w-2.5 h-2.5" /> {activeSolution.timeComplexity}
+                      </span>
+                    )}
+                    {activeSolution.spaceComplexity && (
+                      <span className="inline-flex items-center gap-1">
+                        <FiCpu className="w-2.5 h-2.5" /> {activeSolution.spaceComplexity}
+                      </span>
+                    )}
+                  </div>
 
-              <pre className="p-3 rounded-xl bg-neutral-950 border border-neutral-800 text-neutral-200 text-xs font-mono overflow-x-auto max-h-72">
-                <code>{activeSolution.code}</code>
-              </pre>
+                  {activeSolution.explanation && (
+                    <p className="text-[11px] text-neutral-400 italic">💡 {activeSolution.explanation}</p>
+                  )}
+
+                  <pre className="p-3 rounded-lg bg-neutral-950 border border-neutral-800 text-neutral-200 text-xs font-mono overflow-x-auto max-h-64">
+                    <code>{activeSolution.code}</code>
+                  </pre>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -253,4 +261,3 @@ export default function ProblemCard({
     </div>
   );
 }
-

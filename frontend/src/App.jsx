@@ -9,13 +9,13 @@ import {
   patchProblemStatus,
   toggleFavorite,
   createTag,
+  deleteTag,
   getProfile
 } from "./api";
 import ProblemCard from "./components/ProblemCard";
 import ProblemModal from "./components/ProblemModal";
-import SidebarFilter from "./components/SidebarFilter";
+import SettingsView from "./components/SettingsView";
 import AuthModal from "./components/AuthModal";
-import NewTagModal from "./components/NewTagModal";
 import {
   FiCode,
   FiPlus,
@@ -25,15 +25,17 @@ import {
   FiMoon,
   FiUser,
   FiLogOut,
+  FiList,
+  FiSliders,
   FiCheckCircle,
-  FiAlertCircle,
+  FiFilter,
   FiBookmark,
-  FiCheck,
-  FiClock,
-  FiZap
+  FiBarChart2,
+  FiLayers
 } from "react-icons/fi";
 
 export default function App() {
+  const [activeTab, setActiveTab] = useState("problems"); // 'problems' | 'mustRevise' | 'topics' | 'settings'
   const [problems, setProblems] = useState([]);
   const [tags, setTags] = useState([]);
   const [stats, setStats] = useState(null);
@@ -48,20 +50,29 @@ export default function App() {
     }
   });
 
-  // Filter states
-  const [selectedTagId, setSelectedTagId] = useState(null);
-  const [selectedStatus, setSelectedStatus] = useState("All");
-  const [selectedDifficulty, setSelectedDifficulty] = useState("All");
-  const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
+  // Persistent Filter settings saved in Settings
+  const [filterPreset, setFilterPreset] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem("dsa_filter_preset")) || {
+        tagId: null,
+        status: "All",
+        difficulty: "All",
+        favorite: false,
+      };
+    } catch {
+      return { tagId: null, status: "All", difficulty: "All", favorite: false };
+    }
+  });
+
+  // Client search query
   const [searchQuery, setSearchQuery] = useState("");
 
   // Modals
   const [isProblemModalOpen, setIsProblemModalOpen] = useState(false);
   const [editingProblem, setEditingProblem] = useState(null);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
-  const [isNewTagModalOpen, setIsNewTagModalOpen] = useState(false);
 
-  // Theme
+  // Dark mode
   const [darkMode, setDarkMode] = useState(() => {
     return localStorage.getItem("dsa_theme") === "dark";
   });
@@ -91,7 +102,7 @@ export default function App() {
     }
   }, []);
 
-  // Fetch data
+  // Fetch problems based on activeTab & filterPreset
   useEffect(() => {
     if (user) {
       loadData();
@@ -100,16 +111,21 @@ export default function App() {
       setTags([]);
       setStats(null);
     }
-  }, [user, selectedTagId, selectedStatus, selectedDifficulty, showFavoritesOnly]);
+  }, [user, activeTab, filterPreset]);
 
   const loadData = async () => {
     setLoading(true);
     try {
       const params = {};
-      if (selectedTagId) params.tagId = selectedTagId;
-      if (selectedStatus !== "All") params.status = selectedStatus;
-      if (selectedDifficulty !== "All") params.difficulty = selectedDifficulty;
-      if (showFavoritesOnly) params.favorite = "true";
+
+      if (activeTab === "mustRevise") {
+        params.status = "Must Revise";
+      } else if (activeTab === "problems") {
+        if (filterPreset.tagId) params.tagId = filterPreset.tagId;
+        if (filterPreset.status !== "All") params.status = filterPreset.status;
+        if (filterPreset.difficulty !== "All") params.difficulty = filterPreset.difficulty;
+        if (filterPreset.favorite) params.favorite = "true";
+      }
 
       const [problemList, tagList, statData] = await Promise.all([
         getProblems(params),
@@ -131,6 +147,13 @@ export default function App() {
     localStorage.removeItem("dsa_token");
     localStorage.removeItem("dsa_user");
     setUser(null);
+  };
+
+  // Save Filter Preset from Settings
+  const handleApplyPreset = (newPreset) => {
+    setFilterPreset(newPreset);
+    localStorage.setItem("dsa_filter_preset", JSON.stringify(newPreset));
+    loadData();
   };
 
   // Problem actions
@@ -180,7 +203,6 @@ export default function App() {
   const handleSaveTag = async (tagData) => {
     try {
       await createTag(tagData.name, tagData.parentGroup, tagData.color);
-      setIsNewTagModalOpen(false);
       const tagList = await getTags();
       setTags(tagList);
     } catch (error) {
@@ -188,7 +210,18 @@ export default function App() {
     }
   };
 
-  // Client-side search filtering
+  const handleDeleteTag = async (tagId) => {
+    if (!window.confirm("Delete this tag?")) return;
+    try {
+      await deleteTag(tagId);
+      const tagList = await getTags();
+      setTags(tagList);
+    } catch (error) {
+      alert("Failed to delete tag");
+    }
+  };
+
+  // Search filter
   const displayedProblems = useMemo(() => {
     if (!searchQuery.trim()) return problems;
     const q = searchQuery.toLowerCase();
@@ -200,22 +233,101 @@ export default function App() {
     });
   }, [problems, searchQuery]);
 
+  // Group problems for "Topics View" tab
+  const topicGroupedProblems = useMemo(() => {
+    const map = {};
+    problems.forEach((p) => {
+      if (p.tags && p.tags.length > 0) {
+        p.tags.forEach((t) => {
+          const groupKey = t.parentGroup ? `${t.parentGroup} › ${t.name}` : t.name;
+          if (!map[groupKey]) map[groupKey] = [];
+          map[groupKey].push(p);
+        });
+      } else {
+        if (!map["Uncategorized"]) map["Uncategorized"] = [];
+        map["Uncategorized"].push(p);
+      }
+    });
+    return map;
+  }, [problems]);
+
   return (
-    <div className={`min-h-screen transition-colors duration-300 ${darkMode ? "bg-neutral-950 text-neutral-100" : "bg-neutral-50 text-neutral-900"}`}>
-      {/* Top Navbar */}
-      <header className={`border-b sticky top-0 z-30 backdrop-blur-md ${darkMode ? "bg-neutral-900/80 border-neutral-800" : "bg-white/80 border-neutral-200"}`}>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center text-white shadow-md shadow-indigo-500/20">
-              <FiCode className="w-5 h-5" />
+    <div className={`min-h-screen transition-colors duration-200 text-[13px] ${darkMode ? "bg-neutral-950 text-neutral-100" : "bg-neutral-50 text-neutral-900"}`}>
+      {/* Top Navbar with Multi Tabs */}
+      <header className={`border-b sticky top-0 z-30 backdrop-blur-md ${darkMode ? "bg-neutral-900/90 border-neutral-800" : "bg-white/90 border-neutral-200"}`}>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between gap-4">
+          {/* Logo */}
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white shadow-sm shadow-indigo-500/30">
+              <FiCode className="w-4 h-4" />
             </div>
-            <div>
-              <h1 className="text-lg font-bold tracking-tight">dsa_sheet</h1>
-              <p className="text-xs text-neutral-500 dark:text-neutral-400">Multi-Approach Problem Vault</p>
-            </div>
+            <span className="font-extrabold text-sm tracking-tight hidden sm:inline">dsa_sheet</span>
           </div>
 
-          <div className="flex items-center gap-2.5">
+          {/* Navigation Tabs */}
+          {user && (
+            <nav className="flex items-center gap-1 bg-neutral-100 dark:bg-neutral-950 p-1 rounded-xl border border-neutral-200 dark:border-neutral-800">
+              <button
+                onClick={() => setActiveTab("problems")}
+                className={`px-3 py-1 rounded-lg text-xs font-semibold transition flex items-center gap-1.5 ${
+                  activeTab === "problems"
+                    ? "bg-indigo-600 text-white shadow-sm"
+                    : "text-neutral-500 hover:text-neutral-900 dark:hover:text-white"
+                }`}
+              >
+                <FiList className="w-3.5 h-3.5" />
+                <span>Problems</span>
+                {stats && <span className="opacity-80 text-[11px]">({stats.total})</span>}
+              </button>
+
+              <button
+                onClick={() => setActiveTab("mustRevise")}
+                className={`px-3 py-1 rounded-lg text-xs font-semibold transition flex items-center gap-1.5 ${
+                  activeTab === "mustRevise"
+                    ? "bg-rose-600 text-white shadow-sm"
+                    : "text-neutral-500 hover:text-neutral-900 dark:hover:text-white"
+                }`}
+              >
+                <FiBookmark className="w-3.5 h-3.5" />
+                <span>Must Revise</span>
+                {stats && stats.mustRevise > 0 && (
+                  <span className="bg-rose-500/20 text-rose-400 px-1.5 py-0.2 rounded text-[10px] font-bold">
+                    {stats.mustRevise}
+                  </span>
+                )}
+              </button>
+
+              <button
+                onClick={() => setActiveTab("topics")}
+                className={`px-3 py-1 rounded-lg text-xs font-semibold transition flex items-center gap-1.5 ${
+                  activeTab === "topics"
+                    ? "bg-indigo-600 text-white shadow-sm"
+                    : "text-neutral-500 hover:text-neutral-900 dark:hover:text-white"
+                }`}
+              >
+                <FiLayers className="w-3.5 h-3.5" />
+                <span>Topic View</span>
+              </button>
+
+              <button
+                onClick={() => setActiveTab("settings")}
+                className={`px-3 py-1 rounded-lg text-xs font-semibold transition flex items-center gap-1.5 ${
+                  activeTab === "settings"
+                    ? "bg-indigo-600 text-white shadow-sm"
+                    : "text-neutral-500 hover:text-neutral-900 dark:hover:text-white"
+                }`}
+              >
+                <FiSliders className="w-3.5 h-3.5" />
+                <span>Settings</span>
+                {(filterPreset.tagId || filterPreset.status !== "All" || filterPreset.difficulty !== "All" || filterPreset.favorite) && (
+                  <span className="w-2 h-2 rounded-full bg-indigo-400" title="Active Filter Preset" />
+                )}
+              </button>
+            </nav>
+          )}
+
+          {/* Right Controls */}
+          <div className="flex items-center gap-2">
             {user ? (
               <>
                 <button
@@ -223,28 +335,25 @@ export default function App() {
                     setEditingProblem(null);
                     setIsProblemModalOpen(true);
                   }}
-                  className="px-4 py-2 rounded-xl text-xs font-semibold bg-indigo-600 text-white hover:bg-indigo-500 transition shadow-sm flex items-center gap-1.5"
+                  className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-indigo-600 text-white hover:bg-indigo-500 transition shadow-sm flex items-center gap-1.5"
                 >
-                  <FiPlus className="w-4 h-4" /> Add Problem
+                  <FiPlus className="w-3.5 h-3.5" /> Add Problem
                 </button>
 
-                <div className="flex items-center gap-1.5 pl-2 border-l border-neutral-200 dark:border-neutral-800">
-                  <span className={`px-2.5 py-1.5 rounded-lg border text-xs font-medium ${darkMode ? "border-neutral-800 bg-neutral-900" : "border-neutral-200 bg-neutral-100"}`}>
-                    {user.name}
-                  </span>
-                  <button
-                    onClick={handleLogout}
-                    title="Sign Out"
-                    className={`p-2 rounded-lg border text-rose-500 hover:bg-rose-500/10 transition ${darkMode ? "border-neutral-800" : "border-neutral-200"}`}
-                  >
-                    <FiLogOut className="w-4 h-4" />
-                  </button>
-                </div>
+                <button
+                  onClick={handleLogout}
+                  title="Sign Out"
+                  className={`p-1.5 rounded-lg border text-rose-500 hover:bg-rose-500/10 transition ${
+                    darkMode ? "border-neutral-800" : "border-neutral-200"
+                  }`}
+                >
+                  <FiLogOut className="w-3.5 h-3.5" />
+                </button>
               </>
             ) : (
               <button
                 onClick={() => setIsAuthModalOpen(true)}
-                className="px-4 py-2 rounded-xl text-xs font-semibold bg-indigo-600 text-white hover:bg-indigo-500 transition shadow-sm"
+                className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-indigo-600 text-white hover:bg-indigo-500 transition shadow-sm"
               >
                 Sign In
               </button>
@@ -253,92 +362,126 @@ export default function App() {
             <button
               onClick={() => setDarkMode(!darkMode)}
               title="Toggle Theme"
-              className={`p-2 rounded-xl border transition ${darkMode ? "border-neutral-800 hover:bg-neutral-800 text-amber-400" : "border-neutral-200 hover:bg-neutral-100 text-neutral-700"}`}
+              className={`p-1.5 rounded-lg border transition ${
+                darkMode ? "border-neutral-800 text-amber-400" : "border-neutral-200 text-neutral-700 hover:bg-neutral-100"
+              }`}
             >
-              {darkMode ? <FiSun className="w-4 h-4" /> : <FiMoon className="w-4 h-4" />}
+              {darkMode ? <FiSun className="w-3.5 h-3.5" /> : <FiMoon className="w-3.5 h-3.5" />}
             </button>
           </div>
         </div>
       </header>
 
-      {/* Main Container */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
-        {/* Stats Dashboard */}
-        {user && stats && (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-            <div className={`p-4 rounded-2xl border ${darkMode ? "bg-neutral-900 border-neutral-800" : "bg-white border-neutral-200"}`}>
-              <span className="text-[11px] font-semibold text-neutral-400 uppercase tracking-wider block mb-1">Total Problems</span>
-              <span className="text-2xl font-black text-indigo-500">{stats.total}</span>
+      {/* Main View Area */}
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-5">
+        {/* Not Logged In */}
+        {!user ? (
+          <div className={`text-center py-20 rounded-2xl border ${darkMode ? "bg-neutral-900/40 border-neutral-800" : "bg-white border-neutral-200"}`}>
+            <div className="w-12 h-12 rounded-xl bg-indigo-50 dark:bg-neutral-800 flex items-center justify-center mx-auto mb-3 text-indigo-600 dark:text-indigo-400">
+              <FiCode className="w-6 h-6" />
             </div>
-
-            <div className={`p-4 rounded-2xl border ${darkMode ? "bg-neutral-900 border-neutral-800" : "bg-white border-neutral-200"}`}>
-              <span className="text-[11px] font-semibold text-neutral-400 uppercase tracking-wider block mb-1">Solved / Mastered</span>
-              <span className="text-2xl font-black text-emerald-500">{stats.solved}</span>
-            </div>
-
-            <div className={`p-4 rounded-2xl border ${darkMode ? "bg-neutral-900 border-neutral-800" : "bg-white border-neutral-200"}`}>
-              <span className="text-[11px] font-semibold text-neutral-400 uppercase tracking-wider block mb-1">Must Revise</span>
-              <span className="text-2xl font-black text-rose-500">{stats.mustRevise}</span>
-            </div>
-
-            <div className={`p-4 rounded-2xl border ${darkMode ? "bg-neutral-900 border-neutral-800" : "bg-white border-neutral-200"}`}>
-              <span className="text-[11px] font-semibold text-neutral-400 uppercase tracking-wider block mb-1">Understood</span>
-              <span className="text-2xl font-black text-blue-500">{stats.understood}</span>
-            </div>
-
-            <div className={`p-4 rounded-2xl border ${darkMode ? "bg-neutral-900 border-neutral-800" : "bg-white border-neutral-200"}`}>
-              <span className="text-[11px] font-semibold text-neutral-400 uppercase tracking-wider block mb-1">Bookmarks</span>
-              <span className="text-2xl font-black text-amber-500">{stats.favorites}</span>
-            </div>
-
-            <div className={`p-4 rounded-2xl border ${darkMode ? "bg-neutral-900 border-neutral-800" : "bg-white border-neutral-200"}`}>
-              <span className="text-[11px] font-semibold text-neutral-400 uppercase tracking-wider block mb-1">Difficulty Split</span>
-              <div className="flex items-center gap-1.5 text-xs font-bold pt-1">
-                <span className="text-emerald-500">{stats.byDifficulty.easy}E</span>
-                <span className="text-neutral-400">/</span>
-                <span className="text-amber-500">{stats.byDifficulty.medium}M</span>
-                <span className="text-neutral-400">/</span>
-                <span className="text-rose-500">{stats.byDifficulty.hard}H</span>
+            <h3 className="font-bold text-base mb-1">DSA Sheet Tracker</h3>
+            <p className="text-xs text-neutral-500 dark:text-neutral-400 max-w-sm mx-auto mb-4">
+              Sign in to view your problems, manage custom categories, and track revision cycles.
+            </p>
+            <button
+              onClick={() => setIsAuthModalOpen(true)}
+              className="px-4 py-2 rounded-xl text-xs font-semibold bg-indigo-600 text-white hover:bg-indigo-500 transition shadow-sm"
+            >
+              Sign In with Default Account
+            </button>
+          </div>
+        ) : activeTab === "settings" ? (
+          /* TAB 4: SETTINGS VIEW */
+          <SettingsView
+            tags={tags}
+            activeFilterPreset={filterPreset}
+            onApplyPreset={handleApplyPreset}
+            onSaveNewTag={handleSaveTag}
+            onDeleteTag={handleDeleteTag}
+            darkMode={darkMode}
+          />
+        ) : activeTab === "topics" ? (
+          /* TAB 3: TOPIC GROUPED VIEW */
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-bold tracking-tight">Concept & Topic Groupings</h2>
+                <p className="text-xs text-neutral-500 dark:text-neutral-400">
+                  Problems organized by data structures and algorithmic patterns.
+                </p>
               </div>
             </div>
+
+            <div className="space-y-6">
+              {Object.entries(topicGroupedProblems).map(([topicTitle, groupProblems]) => (
+                <div
+                  key={topicTitle}
+                  className={`p-4 rounded-2xl border space-y-3 ${
+                    darkMode ? "bg-neutral-900/60 border-neutral-800" : "bg-white border-neutral-200"
+                  }`}
+                >
+                  <div className="flex items-center justify-between border-b border-neutral-200 dark:border-neutral-800 pb-2">
+                    <h3 className="text-xs font-bold text-indigo-500 uppercase tracking-wider flex items-center gap-1.5">
+                      <FiLayers className="w-3.5 h-3.5" /> {topicTitle}
+                    </h3>
+                    <span className="text-[11px] font-semibold text-neutral-400">
+                      {groupProblems.length} problem{groupProblems.length !== 1 ? "s" : ""}
+                    </span>
+                  </div>
+
+                  <div className="space-y-2">
+                    {groupProblems.map((problem) => (
+                      <ProblemCard
+                        key={problem._id}
+                        problem={problem}
+                        onStatusChange={handleStatusChange}
+                        onToggleFavorite={handleToggleFavorite}
+                        onEdit={(p) => {
+                          setEditingProblem(p);
+                          setIsProblemModalOpen(true);
+                        }}
+                        onDelete={handleDeleteProblem}
+                        darkMode={darkMode}
+                      />
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
-        )}
+        ) : (
+          /* TAB 1 & 2: PROBLEMS & MUST REVISE CLEAN FULL-WIDTH VIEW */
+          <div className="space-y-4">
+            {/* Header Toolbar: Active Filter Badge + Search Bar */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              {/* Active Filter Indicator */}
+              <div className="flex items-center gap-2 flex-wrap text-xs">
+                <span className="font-bold text-sm text-neutral-900 dark:text-white">
+                  {activeTab === "mustRevise" ? "Must Revise Problems" : "Problem Directory"}
+                </span>
 
-        {/* Content Area: Sidebar + Problems Grid */}
-        <div className="flex flex-col lg:flex-row gap-8 items-start">
-          {/* Sidebar */}
-          {user && (
-            <SidebarFilter
-              tags={tags}
-              selectedTagId={selectedTagId}
-              onSelectTag={setSelectedTagId}
-              selectedStatus={selectedStatus}
-              onSelectStatus={setSelectedStatus}
-              selectedDifficulty={selectedDifficulty}
-              onSelectDifficulty={setSelectedDifficulty}
-              showFavoritesOnly={showFavoritesOnly}
-              onToggleFavoritesOnly={() => setShowFavoritesOnly(!showFavoritesOnly)}
-              onOpenNewTagModal={() => setIsNewTagModalOpen(true)}
-              darkMode={darkMode}
-            />
-          )}
+                {/* Show active filter chip if preset is set */}
+                {activeTab === "problems" && (filterPreset.tagId || filterPreset.status !== "All" || filterPreset.difficulty !== "All" || filterPreset.favorite) && (
+                  <span className="px-2 py-0.5 rounded-md bg-indigo-500/10 border border-indigo-500/20 text-indigo-500 text-[11px] font-semibold inline-flex items-center gap-1">
+                    <FiFilter className="w-3 h-3" /> Filter preset active
+                  </span>
+                )}
+              </div>
 
-          {/* Right Problems Feed */}
-          <div className="flex-1 w-full space-y-4">
-            {/* Search Bar & Quick Controls */}
-            {user && (
-              <div className="flex items-center justify-between gap-3">
+              {/* Fast Search Input */}
+              <div className="flex items-center gap-2 w-full sm:w-80">
                 <div className="relative flex-1">
-                  <FiSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-400 w-4 h-4" />
+                  <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 w-3.5 h-3.5" />
                   <input
                     type="text"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Search problems by name, notes, or tags..."
-                    className={`w-full pl-10 pr-4 py-2.5 rounded-xl text-xs border outline-none font-medium transition ${
+                    placeholder="Search by name, notes, or tags..."
+                    className={`w-full pl-9 pr-3 py-1.5 rounded-xl text-xs border outline-none font-medium transition ${
                       darkMode
                         ? "bg-neutral-900 border-neutral-800 text-white placeholder-neutral-500 focus:border-indigo-500"
-                        : "bg-white border-neutral-200 text-neutral-900 placeholder-neutral-400 focus:border-indigo-500 shadow-sm"
+                        : "bg-white border-neutral-200 text-neutral-900 placeholder-neutral-400 focus:border-indigo-500 shadow-xs"
                     }`}
                   />
                 </div>
@@ -346,33 +489,19 @@ export default function App() {
                 <button
                   onClick={loadData}
                   disabled={loading}
-                  title="Refresh Problems"
-                  className={`p-2.5 rounded-xl border transition ${darkMode ? "border-neutral-800 hover:bg-neutral-800 text-neutral-300" : "border-neutral-200 hover:bg-neutral-100 text-neutral-700"}`}
+                  title="Refresh"
+                  className={`p-2 rounded-xl border transition ${
+                    darkMode ? "border-neutral-800 text-neutral-300" : "border-neutral-200 text-neutral-700"
+                  }`}
                 >
-                  <FiRefreshCw className={`w-4 h-4 ${loading ? "animate-spin text-indigo-500" : ""}`} />
+                  <FiRefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin text-indigo-500" : ""}`} />
                 </button>
               </div>
-            )}
+            </div>
 
-            {/* Problem Cards List */}
-            {!user ? (
-              <div className={`text-center py-20 rounded-2xl border ${darkMode ? "bg-neutral-900/40 border-neutral-800" : "bg-white border-neutral-200"}`}>
-                <div className="w-14 h-14 rounded-2xl bg-indigo-50 dark:bg-neutral-800 flex items-center justify-center mx-auto mb-3 text-indigo-600 dark:text-indigo-400">
-                  <FiCode className="w-7 h-7" />
-                </div>
-                <h3 className="font-bold text-base mb-1">DSA Sheet Tracker</h3>
-                <p className="text-xs text-neutral-500 dark:text-neutral-400 max-w-sm mx-auto mb-4">
-                  Log in to track your personal problem solutions, multiple approaches, time/space complexities, and revision cycles.
-                </p>
-                <button
-                  onClick={() => setIsAuthModalOpen(true)}
-                  className="px-5 py-2.5 rounded-xl text-xs font-semibold bg-indigo-600 text-white hover:bg-indigo-500 transition shadow-sm"
-                >
-                  Sign In with Default Account
-                </button>
-              </div>
-            ) : displayedProblems.length > 0 ? (
-              <div className="space-y-4">
+            {/* Problem List (Full Width, Zoomed Out & Compact) */}
+            {displayedProblems.length > 0 ? (
+              <div className="space-y-2">
                 {displayedProblems.map((problem) => (
                   <ProblemCard
                     key={problem._id}
@@ -390,31 +519,33 @@ export default function App() {
               </div>
             ) : (
               <div className={`text-center py-16 rounded-2xl border ${darkMode ? "bg-neutral-900/40 border-neutral-800" : "bg-white border-neutral-200"}`}>
-                <div className="w-12 h-12 rounded-xl bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center mx-auto mb-3 text-neutral-400">
+                <div className="w-10 h-10 rounded-xl bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center mx-auto mb-3 text-neutral-400">
                   <FiCode className="w-5 h-5" />
                 </div>
                 <h3 className="font-semibold text-sm mb-1">No problems found</h3>
-                <p className="text-xs text-neutral-500 dark:text-neutral-400 mb-4">
-                  {searchQuery || selectedTagId || selectedStatus !== "All"
-                    ? "Try adjusting your filters or search keywords."
-                    : "Add your first DSA problem to get started."}
+                <p className="text-xs text-neutral-500 dark:text-neutral-400 mb-3">
+                  {searchQuery
+                    ? "Try adjusting your search query."
+                    : activeTab === "mustRevise"
+                    ? "No problems marked as Must Revise yet."
+                    : "No problems match your current Settings filter preset."}
                 </p>
                 <button
                   onClick={() => {
                     setEditingProblem(null);
                     setIsProblemModalOpen(true);
                   }}
-                  className="px-4 py-2 rounded-xl text-xs font-semibold bg-indigo-600 text-white hover:bg-indigo-500"
+                  className="px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-indigo-600 text-white hover:bg-indigo-500"
                 >
                   Add Problem
                 </button>
               </div>
             )}
           </div>
-        </div>
+        )}
       </main>
 
-      {/* Modals */}
+      {/* Problem Add / Edit Modal */}
       <ProblemModal
         isOpen={isProblemModalOpen}
         onClose={() => {
@@ -427,17 +558,11 @@ export default function App() {
         darkMode={darkMode}
       />
 
+      {/* Auth Modal */}
       <AuthModal
         isOpen={isAuthModalOpen}
         onClose={() => setIsAuthModalOpen(false)}
         onAuthSuccess={() => loadData()}
-        darkMode={darkMode}
-      />
-
-      <NewTagModal
-        isOpen={isNewTagModalOpen}
-        onClose={() => setIsNewTagModalOpen(false)}
-        onSave={handleSaveTag}
         darkMode={darkMode}
       />
     </div>
