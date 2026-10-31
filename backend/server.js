@@ -9,22 +9,27 @@ const PORT = process.env.PORT || 5001;
 // Connect to MongoDB
 connectDB();
 
-// CORS configuration
-const allowedOrigins = [
-  process.env.FRONTEND_URL,
-  "http://localhost:5173",
-  "http://127.0.0.1:5173",
-].filter(Boolean);
-
+// CORS configuration - support all Vercel previews and localhost
 app.use(
   cors({
     origin: (origin, callback) => {
-      if (!origin || allowedOrigins.includes(origin) || allowedOrigins.includes("*")) {
+      // Allow requests with no origin (mobile, curl, etc.)
+      if (!origin) return callback(null, true);
+
+      const isAllowed =
+        origin.includes("localhost") ||
+        origin.includes("127.0.0.1") ||
+        origin.endsWith(".vercel.app") ||
+        (process.env.FRONTEND_URL && origin === process.env.FRONTEND_URL);
+
+      if (isAllowed) {
         return callback(null, true);
       }
-      return callback(null, true); // Dev permissive
+      return callback(null, true); // Fallback permissive
     },
     credentials: true,
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
   })
 );
 
@@ -40,6 +45,10 @@ app.get("/", (req, res) => {
   res.send("✅ DSA Sheet Tracker API is active and running!");
 });
 
-// Start server
-app.listen(PORT, () => console.log(`🚀 DSA Sheet Server running on port ${PORT}`));
+// For local server execution
+if (process.env.NODE_ENV !== "production") {
+  app.listen(PORT, () => console.log(`🚀 DSA Sheet Server running on port ${PORT}`));
+}
 
+// Export for Vercel Serverless Function
+module.exports = app;

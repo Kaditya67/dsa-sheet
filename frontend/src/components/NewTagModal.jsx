@@ -128,3 +128,4 @@ export default function NewTagModal({ isOpen, onClose, onSave, darkMode }) {
     </div>
   );
 }
+
