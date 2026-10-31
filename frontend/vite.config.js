@@ -10,9 +10,9 @@ export default defineConfig(({ mode }) => {
       react(),
       tailwindcss(),
     ],
-    // Expose API_BASE_URL to client bundle without requiring VITE_ prefix
+    // Default to local backend port 5001 for development
     define: {
-      'import.meta.env.API_BASE_URL': JSON.stringify(env.API_BASE_URL || env.VITE_API_BASE_URL || "https://dsa-sheet-one.vercel.app"),
+      'import.meta.env.API_BASE_URL': JSON.stringify(env.API_BASE_URL || "http://localhost:5001"),
     },
     server: {
       port: 5174,

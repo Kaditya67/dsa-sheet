@@ -1,8 +1,12 @@
-// Supports both import.meta.env.API_BASE_URL and fallback to window/process or direct url
+// Check if running on localhost to use local backend by default
+const isLocal =
+  typeof window !== "undefined" &&
+  (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1");
+
 const rawApiUrl =
   import.meta.env.API_BASE_URL ||
   import.meta.env.VITE_API_BASE_URL ||
-  "https://dsa-sheet-one.vercel.app";
+  (isLocal ? "http://localhost:5001" : "https://dsa-sheet-one.vercel.app");
 
 // Normalize URL by removing any trailing slashes to prevent "//api/..." redirects
 const API_URL = rawApiUrl.replace(/\/+$/, "");
