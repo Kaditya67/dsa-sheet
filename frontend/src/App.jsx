@@ -399,6 +399,7 @@ export default function App() {
             onApplyPreset={handleApplyPreset}
             onSaveNewTag={handleSaveTag}
             onDeleteTag={handleDeleteTag}
+            problems={problems}
             darkMode={darkMode}
           />
         ) : activeTab === "topics" ? (
