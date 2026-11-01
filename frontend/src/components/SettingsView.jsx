@@ -191,8 +191,8 @@ export default function SettingsView({
 
   return (
     <div className="max-w-7xl mx-auto space-y-4 animate-fadeIn">
-      {/* Top Header Row */}
-      <div className="flex items-center justify-between border-b border-neutral-200 dark:border-neutral-800 pb-3">
+      {/* Top Header Row without dividing borders */}
+      <div className="flex items-center justify-between pb-1">
         <div className="flex items-center gap-2">
           <div className="w-7 h-7 rounded-lg bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 flex items-center justify-center">
             <FiSliders className="w-3.5 h-3.5" />
@@ -233,16 +233,16 @@ export default function SettingsView({
         </div>
       </div>
 
-      {/* 2-COLUMN SPLIT SCREEN LAYOUT */}
+      {/* 2-COLUMN SPLIT SCREEN LAYOUT - CLEAN WITHOUT HEAVY DIVIDERS */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
-        {/* LEFT COLUMN: MINIMALIST FILTER PRESET RULES (6 cols) */}
+        {/* LEFT COLUMN: FILTER PRESETS (6 cols) */}
         <div className="lg:col-span-6 space-y-4">
           <div
             className={`p-4 sm:p-5 rounded-xl border space-y-4 ${
-              darkMode ? "bg-neutral-900 border-neutral-800" : "bg-white border-neutral-200"
+              darkMode ? "bg-neutral-900 border-neutral-800" : "bg-white border-neutral-200 shadow-xs"
             }`}
           >
-            <div className="flex items-center justify-between border-b border-neutral-200 dark:border-neutral-800 pb-3">
+            <div className="flex items-center justify-between pb-1">
               <h3 className="text-xs font-semibold flex items-center gap-2 text-neutral-900 dark:text-white">
                 <FiFilter className="w-3.5 h-3.5 text-neutral-400" /> Directory Filter Preset
               </h3>
@@ -422,7 +422,7 @@ export default function SettingsView({
             </div>
 
             {/* Bookmarks toggle + Save Button */}
-            <div className="flex items-center justify-between pt-3 border-t border-neutral-200 dark:border-neutral-800">
+            <div className="flex items-center justify-between pt-2">
               <label className="flex items-center gap-2 cursor-pointer select-none text-xs font-medium text-neutral-700 dark:text-neutral-300">
                 <input
                   type="checkbox"
@@ -450,10 +450,10 @@ export default function SettingsView({
           {/* Create Topic or New Parent Category */}
           <div
             className={`p-4 sm:p-5 rounded-xl border space-y-3 ${
-              darkMode ? "bg-neutral-900 border-neutral-800" : "bg-white border-neutral-200"
+              darkMode ? "bg-neutral-900 border-neutral-800" : "bg-white border-neutral-200 shadow-xs"
             }`}
           >
-            <div className="flex items-center justify-between border-b border-neutral-200 dark:border-neutral-800 pb-2">
+            <div className="flex items-center justify-between pb-1">
               <h3 className="text-xs font-semibold text-neutral-900 dark:text-white flex items-center gap-1.5">
                 <FiPlus className="w-3.5 h-3.5 text-neutral-400" />
                 <span>Create Topic / Parent Category</span>
@@ -468,7 +468,7 @@ export default function SettingsView({
                   <button
                     type="button"
                     onClick={() => setIsCustomParent(!isCustomParent)}
-                    className="text-[11px] text-indigo-500 hover:underline font-medium"
+                    className="text-[11px] text-indigo-500 hover:text-indigo-400 font-medium"
                   >
                     {isCustomParent ? "Choose Existing" : "+ New Parent Category"}
                   </button>
@@ -531,10 +531,10 @@ export default function SettingsView({
           {/* Configured Topics Directory */}
           <div
             className={`p-4 sm:p-5 rounded-xl border space-y-3 ${
-              darkMode ? "bg-neutral-900 border-neutral-800" : "bg-white border-neutral-200"
+              darkMode ? "bg-neutral-900 border-neutral-800" : "bg-white border-neutral-200 shadow-xs"
             }`}
           >
-            <div className="flex items-center justify-between border-b border-neutral-200 dark:border-neutral-800 pb-2">
+            <div className="flex items-center justify-between pb-1">
               <h3 className="text-xs font-semibold text-neutral-900 dark:text-white flex items-center gap-1.5">
                 <FiFolder className="w-3.5 h-3.5 text-neutral-400" />
                 <span>Configured Topics ({tags?.length || 0})</span>
