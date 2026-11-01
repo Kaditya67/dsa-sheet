@@ -310,21 +310,21 @@ export default function App() {
   }, [problems]);
 
   return (
-    <div className={`min-h-screen transition-colors duration-150 text-[13px] ${darkMode ? "bg-neutral-950 text-neutral-100" : "bg-neutral-50 text-neutral-900"}`}>
+    <div className={`min-h-screen transition-colors duration-150 text-[13px] pb-16 sm:pb-0 ${darkMode ? "bg-neutral-950 text-neutral-100" : "bg-neutral-50 text-neutral-900"}`}>
       {/* Top Navbar */}
       <header className={`border-b sticky top-0 z-30 backdrop-blur-md ${darkMode ? "bg-neutral-950/90 border-neutral-800" : "bg-white/90 border-neutral-200"}`}>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-13 flex items-center justify-between gap-4">
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 h-12 sm:h-13 flex items-center justify-between gap-3">
           {/* Logo */}
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-2">
             <div className="w-7 h-7 rounded-lg bg-indigo-600 flex items-center justify-center text-white shadow-xs">
               <FiCode className="w-3.5 h-3.5" />
             </div>
             <span className="font-bold text-sm tracking-tight text-neutral-900 dark:text-white">DSA Sheet</span>
           </div>
 
-          {/* Navigation Tabs */}
+          {/* Desktop Navigation Tabs (Hidden on mobile; mobile uses dedicated Bottom Bar) */}
           {user && (
-            <nav className={`flex items-center gap-1 p-1 rounded-xl border ${darkMode ? "bg-neutral-900 border-neutral-800" : "bg-neutral-100 border-neutral-200"}`}>
+            <nav className={`hidden sm:flex items-center gap-1 p-1 rounded-xl border ${darkMode ? "bg-neutral-900 border-neutral-800" : "bg-neutral-100 border-neutral-200"}`}>
               <button
                 onClick={() => setActiveTab("problems")}
                 className={`px-3 py-1 rounded-lg text-xs font-medium transition flex items-center gap-1.5 ${
@@ -385,7 +385,7 @@ export default function App() {
           )}
 
           {/* Right Controls */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 sm:gap-2">
             {user ? (
               <>
                 <button
@@ -409,7 +409,7 @@ export default function App() {
                   className="px-3 py-1.5 rounded-lg text-xs font-medium bg-indigo-600 text-white hover:bg-indigo-500 transition shadow-xs flex items-center gap-1.5"
                 >
                   <FiPlus className="w-3.5 h-3.5" />
-                  <span>Add Problem</span>
+                  <span className="hidden sm:inline">Add Problem</span>
                 </button>
 
                 <button
@@ -447,7 +447,7 @@ export default function App() {
       </header>
 
       {/* Main View Area */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-5">
+      <main className="max-w-7xl mx-auto px-3 sm:px-6 py-4 sm:py-6 space-y-4 pb-20 sm:pb-8">
         {/* Not Logged In Clean Welcome Card */}
         {!user ? (
           <div className="py-16 sm:py-24 flex justify-center">
@@ -683,6 +683,79 @@ export default function App() {
         onSyncComplete={loadData}
         darkMode={darkMode}
       />
+
+      {/* Mobile Bottom Navigation Bar */}
+      {user && (
+        <nav
+          className={`sm:hidden fixed bottom-0 left-0 right-0 z-40 border-t backdrop-blur-md px-3 py-1.5 flex items-center justify-around transition-colors ${
+            darkMode
+              ? "bg-neutral-950/90 border-neutral-800 text-neutral-400"
+              : "bg-white/90 border-neutral-200 text-neutral-600"
+          }`}
+        >
+          <button
+            onClick={() => setActiveTab("problems")}
+            className={`flex flex-col items-center justify-center gap-0.5 py-1 px-3 rounded-lg text-[10px] font-medium transition ${
+              activeTab === "problems"
+                ? darkMode
+                  ? "text-indigo-400 font-semibold"
+                  : "text-indigo-600 font-semibold"
+                : "hover:text-neutral-900 dark:hover:text-white"
+            }`}
+          >
+            <FiList className={`w-4 h-4 ${activeTab === "problems" ? "stroke-[2.5]" : ""}`} />
+            <span>Problems</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab("mustRevise")}
+            className={`flex flex-col items-center justify-center gap-0.5 py-1 px-3 rounded-lg text-[10px] font-medium transition relative ${
+              activeTab === "mustRevise"
+                ? darkMode
+                  ? "text-indigo-400 font-semibold"
+                  : "text-indigo-600 font-semibold"
+                : "hover:text-neutral-900 dark:hover:text-white"
+            }`}
+          >
+            <FiBookmark className={`w-4 h-4 ${activeTab === "mustRevise" ? "stroke-[2.5]" : ""}`} />
+            <span>Revise</span>
+            {stats?.mustRevise > 0 && (
+              <span className="absolute top-0.5 right-2 w-1.5 h-1.5 rounded-full bg-amber-500" />
+            )}
+          </button>
+
+          <button
+            onClick={() => setActiveTab("topics")}
+            className={`flex flex-col items-center justify-center gap-0.5 py-1 px-3 rounded-lg text-[10px] font-medium transition relative ${
+              activeTab === "topics"
+                ? darkMode
+                  ? "text-indigo-400 font-semibold"
+                  : "text-indigo-600 font-semibold"
+                : "hover:text-neutral-900 dark:hover:text-white"
+            }`}
+          >
+            <FiLayers className={`w-4 h-4 ${activeTab === "topics" ? "stroke-[2.5]" : ""}`} />
+            <span>Topics</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab("settings")}
+            className={`flex flex-col items-center justify-center gap-0.5 py-1 px-3 rounded-lg text-[10px] font-medium transition relative ${
+              activeTab === "settings"
+                ? darkMode
+                  ? "text-indigo-400 font-semibold"
+                  : "text-indigo-600 font-semibold"
+                : "hover:text-neutral-900 dark:hover:text-white"
+            }`}
+          >
+            <FiSliders className={`w-4 h-4 ${activeTab === "settings" ? "stroke-[2.5]" : ""}`} />
+            <span>Settings</span>
+            {(filterPreset.tagId || filterPreset.status !== "All" || filterPreset.difficulty !== "All" || filterPreset.favorite) && (
+              <span className="absolute top-0.5 right-2 w-1.5 h-1.5 rounded-full bg-indigo-500" />
+            )}
+          </button>
+        </nav>
+      )}
     </div>
   );
 }
