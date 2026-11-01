@@ -15,17 +15,17 @@ import {
 
 const STATUS_COLORS = {
   Todo: "bg-neutral-500/10 text-neutral-500 border-neutral-500/20",
-  Attempted: "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20",
-  Understood: "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20",
-  Solved: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20",
-  "Must Revise": "bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20 font-bold",
-  Mastered: "bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20",
+  Attempted: "bg-amber-500/15 text-amber-500 border-amber-500/30",
+  Understood: "bg-blue-500/15 text-blue-500 border-blue-500/30",
+  Solved: "bg-emerald-500/15 text-emerald-500 border-emerald-500/30 font-semibold",
+  "Must Revise": "bg-rose-500/15 text-rose-500 border-rose-500/30 font-bold",
+  Mastered: "bg-purple-500/15 text-purple-400 border-purple-500/30 font-semibold",
 };
 
 const DIFFICULTY_COLORS = {
-  Easy: "text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border-emerald-500/20",
-  Medium: "text-amber-600 dark:text-amber-400 bg-amber-500/10 border-amber-500/20",
-  Hard: "text-rose-600 dark:text-rose-400 bg-rose-500/10 border-rose-500/20",
+  Easy: "text-emerald-500 bg-emerald-500/10 border-emerald-500/25",
+  Medium: "text-amber-500 bg-amber-500/10 border-amber-500/25",
+  Hard: "text-rose-500 bg-rose-500/10 border-rose-500/25",
 };
 
 export default function ProblemCard({
@@ -50,8 +50,8 @@ export default function ProblemCard({
 
   return (
     <div
-      className={`rounded-xl border transition-all duration-150 overflow-hidden shadow-xs hover:border-neutral-400 dark:hover:border-neutral-700 ${
-        darkMode ? "bg-neutral-900 border-neutral-800" : "bg-white border-neutral-200"
+      className={`rounded-xl border transition-all duration-150 overflow-hidden shadow-xs hover:border-indigo-500/40 hover:shadow-md ${
+        darkMode ? "bg-neutral-900/90 border-neutral-800/90" : "bg-white border-neutral-200/90"
       }`}
     >
       {/* Compact Main Row */}

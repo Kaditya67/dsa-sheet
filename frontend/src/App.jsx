@@ -390,22 +390,41 @@ export default function App() {
 
       {/* Main View Area */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-5">
-        {/* Not Logged In */}
+        {/* Not Logged In Clean Welcome Card */}
         {!user ? (
-          <div className={`text-center py-20 rounded-2xl border ${darkMode ? "bg-neutral-900/40 border-neutral-800" : "bg-white border-neutral-200"}`}>
-            <div className="w-12 h-12 rounded-xl bg-indigo-50 dark:bg-neutral-800 flex items-center justify-center mx-auto mb-3 text-indigo-600 dark:text-indigo-400">
-              <FiCode className="w-6 h-6" />
-            </div>
-            <h3 className="font-bold text-base mb-1">DSA Sheet Tracker</h3>
-            <p className="text-xs text-neutral-500 dark:text-neutral-400 max-w-sm mx-auto mb-4">
-              Sign in to view your problems, manage custom categories, and track revision cycles.
-            </p>
-            <button
-              onClick={() => setIsAuthModalOpen(true)}
-              className="px-4 py-2 rounded-xl text-xs font-semibold bg-indigo-600 text-white hover:bg-indigo-500 transition shadow-sm"
+          <div className="py-12 sm:py-20 flex justify-center">
+            <div
+              className={`relative max-w-lg w-full p-8 sm:p-10 rounded-3xl border shadow-2xl text-center overflow-hidden transition-all ${
+                darkMode
+                  ? "bg-neutral-900/90 border-neutral-800 shadow-indigo-500/5 text-white"
+                  : "bg-white border-neutral-200/80 shadow-xl text-neutral-900"
+              }`}
             >
-              Sign In with Default Account
-            </button>
+              {/* Background Glow */}
+              <div className="absolute -top-16 -left-16 w-40 h-40 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
+              <div className="absolute -bottom-16 -right-16 w-40 h-40 bg-purple-500/10 rounded-full blur-3xl pointer-events-none" />
+
+              <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-indigo-600 to-indigo-500 flex items-center justify-center mx-auto mb-4 text-white shadow-lg shadow-indigo-500/30">
+                <FiCode className="w-7 h-7" />
+              </div>
+
+              <h2 className="text-xl sm:text-2xl font-black tracking-tight mb-2">
+                DSA Problem Vault
+              </h2>
+              <p className="text-xs sm:text-sm text-neutral-500 dark:text-neutral-400 max-w-md mx-auto mb-6 leading-relaxed">
+                Track your data structures and algorithms mastery with multi-approach solutions, custom complexity metrics, and revision cycles.
+              </p>
+
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+                <button
+                  onClick={() => setIsAuthModalOpen(true)}
+                  className="w-full sm:w-auto px-6 py-2.5 rounded-xl text-xs font-bold bg-indigo-600 text-white hover:bg-indigo-500 transition shadow-lg shadow-indigo-500/25 flex items-center justify-center gap-2"
+                >
+                  <FiUser className="w-4 h-4" />
+                  <span>Sign In / Quick Access</span>
+                </button>
+              </div>
+            </div>
           </div>
         ) : activeTab === "settings" ? (
           /* TAB 4: SETTINGS VIEW */
