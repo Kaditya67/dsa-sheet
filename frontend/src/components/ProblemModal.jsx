@@ -57,10 +57,31 @@ export default function ProblemModal({ isOpen, onClose, onSave, onSaveNewTag, in
     return () => document.removeEventListener("mousedown", handleOutsideClick);
   }, []);
 
-  if (!isOpen) return null;
+  // Sync state when initialData or modal opening state changes
+  useEffect(() => {
+    if (isOpen) {
+      setTitle(initialData?.title || "");
+      setDescription(initialData?.description || "");
+      setDifficulty(initialData?.difficulty || "Medium");
+      setStatus(initialData?.status || "Todo");
+      setIsFavorite(Boolean(initialData?.isFavorite));
+      setSelectedTagIds(
+        initialData?.tags ? initialData.tags.map((t) => (typeof t === "object" ? t._id : t)) : []
+      );
+      setLinks(
+        initialData?.links && initialData.links.length > 0
+          ? initialData.links
+          : [{ platform: "LeetCode", url: "", label: "" }]
+      );
+      setIsTagDropdownOpen(false);
+      setTagSearch("");
+      setIsCreatingTag(false);
+    }
+  }, [isOpen, initialData]);
 
-  // Group tags by parentGroup
+  // Group tags by parentGroup (Hooks must be called BEFORE any early return!)
   const parentGroupsList = useMemo(() => {
+    if (!tags) return [];
     const groups = new Set();
     tags.forEach((t) => {
       if (t.parentGroup) groups.add(t.parentGroup);
@@ -70,6 +91,7 @@ export default function ProblemModal({ isOpen, onClose, onSave, onSaveNewTag, in
 
   // Filtered tags for dropdown
   const filteredTags = useMemo(() => {
+    if (!tags) return [];
     return tags.filter((t) => {
       const matchSearch = t.name.toLowerCase().includes(tagSearch.toLowerCase().trim());
       const matchParent =
@@ -81,6 +103,8 @@ export default function ProblemModal({ isOpen, onClose, onSave, onSaveNewTag, in
       return matchSearch && matchParent;
     });
   }, [tags, tagSearch, selectedParentFilter]);
+
+  if (!isOpen) return null;
 
   // Tag helpers
   const handleToggleTag = (tagId) => {
