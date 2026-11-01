@@ -19,7 +19,9 @@ import {
   FiClock,
   FiStar,
   FiDatabase,
-  FiActivity
+  FiActivity,
+  FiEdit3,
+  FiCode
 } from "react-icons/fi";
 
 const STATUS_ITEMS = [
@@ -69,6 +71,7 @@ export default function SettingsView({
   onDeleteTag,
   problems,
   darkMode,
+  onOpenJsonEditor,
 }) {
   const [activeSection, setActiveSection] = useState("presets"); // 'presets' | 'tags' | 'data' | 'system'
 
@@ -761,19 +764,34 @@ export default function SettingsView({
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-neutral-200 dark:border-neutral-800 pb-4">
             <div>
               <h3 className="text-sm font-bold flex items-center gap-2">
-                <FiDownload className="text-indigo-500" /> Complete Backup & Export
+                <FiDownload className="text-indigo-500" /> Backup, Export & Bulk JSON
               </h3>
               <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
-                Download an offline JSON copy containing all problems, multi-language solutions, and categories.
+                Download an offline backup, or bulk edit and import problems and structures using the JSON Editor.
               </p>
             </div>
 
-            <button
-              onClick={handleExportBackup}
-              className="px-5 py-2.5 rounded-2xl bg-indigo-600 text-white text-xs font-bold hover:bg-indigo-500 transition shadow-lg shadow-indigo-500/25 flex items-center gap-2 shrink-0"
-            >
-              <FiDownload className="w-4 h-4" /> Download JSON Backup
-            </button>
+            <div className="flex items-center gap-2 shrink-0">
+              {onOpenJsonEditor && (
+                <button
+                  onClick={onOpenJsonEditor}
+                  className={`px-4 py-2.5 rounded-2xl text-xs font-bold border transition flex items-center gap-2 ${
+                    darkMode
+                      ? "border-neutral-700 bg-neutral-800 text-white hover:border-indigo-500 hover:text-indigo-400"
+                      : "border-neutral-300 bg-white text-neutral-800 hover:border-indigo-500 hover:text-indigo-600 shadow-sm"
+                  }`}
+                >
+                  <FiCode className="w-4 h-4 text-indigo-500" /> Bulk JSON Editor
+                </button>
+              )}
+
+              <button
+                onClick={handleExportBackup}
+                className="px-5 py-2.5 rounded-2xl bg-indigo-600 text-white text-xs font-bold hover:bg-indigo-500 transition shadow-lg shadow-indigo-500/25 flex items-center gap-2"
+              >
+                <FiDownload className="w-4 h-4" /> Download Backup
+              </button>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

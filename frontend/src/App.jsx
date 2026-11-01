@@ -16,6 +16,7 @@ import ProblemCard from "./components/ProblemCard";
 import ProblemModal from "./components/ProblemModal";
 import SettingsView from "./components/SettingsView";
 import AuthModal from "./components/AuthModal";
+import JsonEditorModal from "./components/JsonEditorModal";
 import {
   FiCode,
   FiPlus,
@@ -31,7 +32,8 @@ import {
   FiFilter,
   FiBookmark,
   FiBarChart2,
-  FiLayers
+  FiLayers,
+  FiFileText
 } from "react-icons/fi";
 
 export default function App() {
@@ -69,6 +71,7 @@ export default function App() {
 
   // Modals
   const [isProblemModalOpen, setIsProblemModalOpen] = useState(false);
+  const [isJsonModalOpen, setIsJsonModalOpen] = useState(false);
   const [editingProblem, setEditingProblem] = useState(null);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
 
@@ -331,6 +334,19 @@ export default function App() {
             {user ? (
               <>
                 <button
+                  onClick={() => setIsJsonModalOpen(true)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition flex items-center gap-1.5 ${
+                    darkMode
+                      ? "border-neutral-800 bg-neutral-900 text-neutral-200 hover:border-indigo-500 hover:text-indigo-400"
+                      : "border-neutral-200 bg-white text-neutral-700 hover:border-indigo-500 hover:text-indigo-600 shadow-xs"
+                  }`}
+                  title="Bulk Edit / Import JSON"
+                >
+                  <FiFileText className="w-3.5 h-3.5 text-indigo-500" />
+                  <span className="hidden sm:inline">JSON Batch</span>
+                </button>
+
+                <button
                   onClick={() => {
                     setEditingProblem(null);
                     setIsProblemModalOpen(true);
@@ -401,6 +417,7 @@ export default function App() {
             onDeleteTag={handleDeleteTag}
             problems={problems}
             darkMode={darkMode}
+            onOpenJsonEditor={() => setIsJsonModalOpen(true)}
           />
         ) : activeTab === "topics" ? (
           /* TAB 3: TOPIC GROUPED VIEW */
@@ -567,6 +584,15 @@ export default function App() {
           setUser(userData);
           loadData();
         }}
+        darkMode={darkMode}
+      />
+
+      {/* JSON Batch Editor Modal */}
+      <JsonEditorModal
+        isOpen={isJsonModalOpen}
+        onClose={() => setIsJsonModalOpen(false)}
+        currentProblems={problems}
+        onSyncComplete={loadData}
         darkMode={darkMode}
       />
     </div>

@@ -164,6 +164,70 @@ router.patch("/:id/toggle-favorite", protect, async (req, res) => {
   }
 });
 
+// @route POST /api/problems/bulk-sync
+// @desc Bulk import, update, or replace problems via JSON
+router.post("/bulk-sync", protect, async (req, res) => {
+  try {
+    const { problems, mode } = req.body; // mode: 'upsert' (default) or 'replace'
+
+    if (!Array.isArray(problems)) {
+      return res.status(400).json({ error: "Input must be an array of problem objects" });
+    }
+
+    const userId = req.user._id;
+
+    if (mode === "replace") {
+      // Clear existing problems before inserting
+      await Problem.deleteMany({ userId });
+    }
+
+    const processed = [];
+
+    for (const item of problems) {
+      if (!item.title || !item.title.trim()) continue;
+
+      const problemData = {
+        userId,
+        title: item.title.trim(),
+        difficulty: ["Easy", "Medium", "Hard"].includes(item.difficulty) ? item.difficulty : "Medium",
+        status: ["Todo", "Attempted", "Understood", "Solved", "Must Revise", "Mastered"].includes(item.status)
+          ? item.status
+          : "Todo",
+        isFavorite: Boolean(item.isFavorite),
+        revisionCount: Number(item.revisionCount) || 0,
+        links: Array.isArray(item.links) ? item.links : [],
+        solutions: Array.isArray(item.solutions) ? item.solutions : [],
+        tags: Array.isArray(item.tags)
+          ? item.tags.map((t) => (typeof t === "object" && t !== null && t._id ? t._id : t))
+          : [],
+        personalNotes: item.personalNotes || "",
+        lastPracticedAt: new Date(),
+      };
+
+      if (item._id && mode !== "replace") {
+        // Try updating existing document by _id
+        const existing = await Problem.findOneAndUpdate(
+          { _id: item._id, userId },
+          problemData,
+          { new: true, upsert: true }
+        );
+        processed.push(existing);
+      } else {
+        const created = await Problem.create(problemData);
+        processed.push(created);
+      }
+    }
+
+    res.json({
+      message: `Successfully processed ${processed.length} problems!`,
+      count: processed.length,
+    });
+  } catch (error) {
+    console.error("Bulk Sync Error:", error);
+    res.status(500).json({ error: error.message || "Failed to process bulk problems" });
+  }
+});
+
 // @route DELETE /api/problems/:id
 router.delete("/:id", protect, async (req, res) => {
   try {

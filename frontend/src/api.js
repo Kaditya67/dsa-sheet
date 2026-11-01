@@ -151,3 +151,15 @@ export const deleteProblem = async (id) => {
   if (!res.ok) throw new Error(data.error || "Failed to delete problem");
   return data;
 };
+
+// Bulk JSON Sync / Import API
+export const bulkSyncProblems = async (problems, mode = "upsert") => {
+  const res = await fetch(`${API_URL}/api/problems/bulk-sync`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getAuthHeaders() },
+    body: JSON.stringify({ problems, mode }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || "Failed to bulk sync problems");
+  return data;
+};
