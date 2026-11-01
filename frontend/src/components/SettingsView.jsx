@@ -5,7 +5,6 @@ import {
   FiTrash2,
   FiFilter,
   FiCheck,
-  FiLayers,
   FiRotateCcw,
   FiSliders,
   FiDownload,
@@ -13,8 +12,6 @@ import {
   FiChevronDown,
   FiSearch,
   FiX,
-  FiCheckCircle,
-  FiStar,
   FiCode
 } from "react-icons/fi";
 
@@ -37,24 +34,12 @@ const DIFFICULTY_ITEMS = [
 
 const PARENT_GROUPS = ["Data Structures", "Algorithms", "Companies", "Custom Lists", "None"];
 
-const PRESET_COLORS = [
-  "#3b82f6",
-  "#6366f1",
-  "#8b5cf6",
-  "#ec4899",
-  "#f43f5e",
-  "#10b981",
-  "#f59e0b",
-  "#06b6d4",
-  "#64748b",
-];
-
 const QUICK_PRESETS = [
   { label: "Show All", preset: { tagId: null, status: "All", difficulty: "All", favorite: false } },
-  { label: "Must Revise Only", preset: { tagId: null, status: "Must Revise", difficulty: "All", favorite: false } },
-  { label: "Unsolved Problems", preset: { tagId: null, status: "Todo", difficulty: "All", favorite: false } },
-  { label: "Starred / Bookmarks", preset: { tagId: null, status: "All", difficulty: "All", favorite: true } },
-  { label: "Hard Challenges", preset: { tagId: null, status: "All", difficulty: "Hard", favorite: false } },
+  { label: "Must Revise", preset: { tagId: null, status: "Must Revise", difficulty: "All", favorite: false } },
+  { label: "Unsolved", preset: { tagId: null, status: "Todo", difficulty: "All", favorite: false } },
+  { label: "Bookmarks", preset: { tagId: null, status: "All", difficulty: "All", favorite: true } },
+  { label: "Hard Problems", preset: { tagId: null, status: "All", difficulty: "Hard", favorite: false } },
 ];
 
 export default function SettingsView({
@@ -67,8 +52,6 @@ export default function SettingsView({
   darkMode,
   onOpenJsonEditor,
 }) {
-  const [activeSection, setActiveSection] = useState("presets"); // 'presets' | 'tags' | 'data' | 'system'
-
   // Presets state
   const [selectedTagId, setSelectedTagId] = useState(activeFilterPreset?.tagId || null);
   const [selectedStatus, setSelectedStatus] = useState(activeFilterPreset?.status || "All");
@@ -102,7 +85,7 @@ export default function SettingsView({
 
   // Group tags by parentGroup
   const groupedTags = useMemo(() => {
-    return tags.reduce((acc, tag) => {
+    return (tags || []).reduce((acc, tag) => {
       const group = tag.parentGroup || "Custom Lists";
       if (!acc[group]) acc[group] = [];
       acc[group].push(tag);
@@ -112,7 +95,7 @@ export default function SettingsView({
 
   // Selected tag object
   const selectedTagObj = useMemo(() => {
-    if (!selectedTagId) return null;
+    if (!selectedTagId || !tags) return null;
     return tags.find((t) => t._id === selectedTagId) || null;
   }, [tags, selectedTagId]);
 
@@ -142,51 +125,55 @@ export default function SettingsView({
     };
     onApplyPreset(preset);
     setSavedFeedback(true);
-    setTimeout(() => setSavedFeedback(false), 2500);
+    setTimeout(() => setSavedFeedback(false), 2000);
   };
 
   const handleQuickPresetClick = (preset) => {
     setSelectedTagId(preset.tagId);
     setSelectedStatus(preset.status);
     setSelectedDifficulty(preset.difficulty);
-    setFavoritesOnly(preset.favorite);
+    setFavoritesOnly(Boolean(preset.favorite));
+
     onApplyPreset(preset);
     setSavedFeedback(true);
-    setTimeout(() => setSavedFeedback(false), 2500);
+    setTimeout(() => setSavedFeedback(false), 2000);
   };
 
   const handleResetFilters = () => {
-    const reset = { tagId: null, status: "All", difficulty: "All", favorite: false };
+    const defaultPreset = { tagId: null, status: "All", difficulty: "All", favorite: false };
     setSelectedTagId(null);
     setSelectedStatus("All");
     setSelectedDifficulty("All");
     setFavoritesOnly(false);
-    onApplyPreset(reset);
-    setSavedFeedback(true);
-    setTimeout(() => setSavedFeedback(false), 2500);
+    onApplyPreset(defaultPreset);
   };
 
-  const handleCreateTag = (e) => {
+  const handleCreateTagSubmit = async (e) => {
     e.preventDefault();
     if (!newTagName.trim()) return;
-    onSaveNewTag({
+
+    await onSaveNewTag({
       name: newTagName.trim(),
       parentGroup: newTagGroup === "None" ? null : newTagGroup,
       color: newTagColor,
     });
+
     setNewTagName("");
   };
 
+  // Export full JSON backup
   const handleExportBackup = () => {
     const backupData = {
       exportedAt: new Date().toISOString(),
-      problemsCount: problems?.length || 0,
-      tagsCount: tags?.length || 0,
+      problemsCount: problems.length,
+      tagsCount: tags.length,
       tags,
       problems,
     };
 
-    const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: "application/json" });
+    const blob = new Blob([JSON.stringify(backupData, null, 2)], {
+      type: "application/json",
+    });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
@@ -198,65 +185,54 @@ export default function SettingsView({
   };
 
   return (
-    <div className="space-y-6 max-w-5xl mx-auto animate-fadeIn">
-      {/* Header bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-neutral-200 dark:border-neutral-800 pb-3">
-        <div>
-          <h2 className="text-base font-bold tracking-tight flex items-center gap-2 text-neutral-900 dark:text-white">
-            <FiSliders className="w-4 h-4 text-indigo-500" />
-            <span>Settings</span>
+    <div className="max-w-7xl mx-auto space-y-4 animate-fadeIn">
+      {/* Top Header Row with Feedback & JSON trigger */}
+      <div className="flex items-center justify-between border-b border-neutral-200 dark:border-neutral-800 pb-3">
+        <div className="flex items-center gap-2">
+          <div className="w-7 h-7 rounded-lg bg-indigo-600/10 border border-indigo-500/20 text-indigo-500 flex items-center justify-center">
+            <FiSliders className="w-3.5 h-3.5" />
+          </div>
+          <h2 className="text-sm font-bold tracking-tight text-neutral-900 dark:text-white">
+            Workspace Settings
           </h2>
         </div>
 
-        {/* Sub-tab pills */}
-        <div className={`flex items-center gap-1 p-1 rounded-xl border ${darkMode ? "bg-neutral-900 border-neutral-800" : "bg-neutral-100 border-neutral-200"}`}>
+        <div className="flex items-center gap-2">
+          {savedFeedback && (
+            <span className="text-xs font-semibold text-emerald-500 flex items-center gap-1 animate-fadeIn">
+              <FiCheck className="w-3.5 h-3.5" /> Saved
+            </span>
+          )}
+
+          {onOpenJsonEditor && (
+            <button
+              onClick={onOpenJsonEditor}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition flex items-center gap-1.5 ${
+                darkMode
+                  ? "border-neutral-800 bg-neutral-900 text-neutral-200 hover:border-neutral-700 hover:text-white"
+                  : "border-neutral-200 bg-white text-neutral-800 hover:border-neutral-300 shadow-xs"
+              }`}
+            >
+              <FiCode className="w-3.5 h-3.5 text-indigo-500" />
+              <span>Bulk JSON Editor</span>
+            </button>
+          )}
+
           <button
-            onClick={() => setActiveSection("presets")}
-            className={`px-3 py-1 rounded-lg text-xs font-medium transition ${
-              activeSection === "presets"
-                ? "bg-indigo-600 text-white shadow-xs"
-                : "text-neutral-500 hover:text-neutral-900 dark:hover:text-white"
-            }`}
+            onClick={handleExportBackup}
+            className="px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-xs font-semibold hover:bg-indigo-500 transition shadow-xs flex items-center gap-1.5"
           >
-            Filter Presets
-          </button>
-          <button
-            onClick={() => setActiveSection("tags")}
-            className={`px-3 py-1 rounded-lg text-xs font-medium transition ${
-              activeSection === "tags"
-                ? "bg-indigo-600 text-white shadow-xs"
-                : "text-neutral-500 hover:text-neutral-900 dark:hover:text-white"
-            }`}
-          >
-            Topics ({tags.length})
-          </button>
-          <button
-            onClick={() => setActiveSection("data")}
-            className={`px-3 py-1 rounded-lg text-xs font-medium transition ${
-              activeSection === "data"
-                ? "bg-indigo-600 text-white shadow-xs"
-                : "text-neutral-500 hover:text-neutral-900 dark:hover:text-white"
-            }`}
-          >
-            Backup & JSON
-          </button>
-          <button
-            onClick={() => setActiveSection("system")}
-            className={`px-3 py-1 rounded-lg text-xs font-medium transition ${
-              activeSection === "system"
-                ? "bg-indigo-600 text-white shadow-xs"
-                : "text-neutral-500 hover:text-neutral-900 dark:hover:text-white"
-            }`}
-          >
-            Server
+            <FiDownload className="w-3.5 h-3.5" />
+            <span>Export Backup</span>
           </button>
         </div>
       </div>
 
-      {/* SECTION 1: FILTER PRESETS */}
-      {activeSection === "presets" && (
-        <div className="space-y-4">
-          {/* Quick Preset Buttons */}
+      {/* 2-COLUMN SPLIT SCREEN LAYOUT ON DESKTOP */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+        {/* LEFT COLUMN: FILTER PRESETS & DIRECTORY RULES (7 cols) */}
+        <div className="lg:col-span-7 space-y-4">
+          {/* Quick Presets */}
           <div
             className={`p-4 rounded-xl border ${
               darkMode ? "bg-neutral-900 border-neutral-800" : "bg-white border-neutral-200"
@@ -264,7 +240,7 @@ export default function SettingsView({
           >
             <div className="flex items-center justify-between mb-2">
               <span className="text-[11px] font-bold text-neutral-400 uppercase tracking-wider">
-                Quick-Focus Presets
+                Instant Focus Presets
               </span>
             </div>
             <div className="flex flex-wrap gap-1.5">
@@ -294,31 +270,31 @@ export default function SettingsView({
             </div>
           </div>
 
-          {/* Custom Filter Setting */}
+          {/* Detailed Custom Preset Controls */}
           <div
-            className={`p-5 rounded-xl border space-y-4 ${
+            className={`p-4 sm:p-5 rounded-xl border space-y-4 ${
               darkMode ? "bg-neutral-900 border-neutral-800" : "bg-white border-neutral-200"
             }`}
           >
             <div className="flex items-center justify-between border-b border-neutral-200 dark:border-neutral-800 pb-3">
               <h3 className="text-xs font-bold flex items-center gap-2 text-neutral-900 dark:text-white">
-                <FiFilter className="text-indigo-500" /> Directory Filters
+                <FiFilter className="text-indigo-500" /> Directory Filter Rules
               </h3>
 
               <button
                 onClick={handleResetFilters}
-                className="text-[11px] px-2.5 py-1 rounded-md border border-neutral-200 dark:border-neutral-800 text-neutral-500 hover:text-neutral-900 dark:hover:text-white font-medium inline-flex items-center gap-1 transition"
+                className="text-[11px] px-2 py-0.5 rounded-md border border-neutral-200 dark:border-neutral-800 text-neutral-500 hover:text-neutral-900 dark:hover:text-white font-medium inline-flex items-center gap-1 transition"
               >
                 <FiRotateCcw className="w-3 h-3" /> Reset
               </button>
             </div>
 
-            {/* Status Selector Pills */}
-            <div className="space-y-2">
-              <label className="text-xs font-bold text-neutral-700 dark:text-neutral-300 block">
+            {/* Status Pills */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-neutral-700 dark:text-neutral-300 block">
                 Target Status
               </label>
-              <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-2">
+              <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-1.5">
                 {STATUS_ITEMS.map((item) => {
                   const isSelected = selectedStatus === item.value;
                   return (
@@ -326,9 +302,9 @@ export default function SettingsView({
                       key={item.value}
                       type="button"
                       onClick={() => setSelectedStatus(item.value)}
-                      className={`px-3 py-2 rounded-xl text-xs font-semibold border transition text-center flex items-center justify-center gap-1.5 ${
+                      className={`px-2 py-1.5 rounded-lg text-[11px] font-semibold border transition text-center flex items-center justify-center gap-1 ${
                         isSelected
-                          ? "bg-indigo-600 text-white border-indigo-600 shadow-md shadow-indigo-500/20"
+                          ? "bg-indigo-600 text-white border-indigo-600 shadow-xs"
                           : darkMode
                           ? "bg-neutral-950 border-neutral-800 text-neutral-300 hover:border-neutral-700"
                           : "bg-neutral-50 border-neutral-200 text-neutral-700 hover:border-neutral-300"
@@ -336,7 +312,7 @@ export default function SettingsView({
                     >
                       {item.color && (
                         <span
-                          className="w-2 h-2 rounded-full shrink-0"
+                          className="w-1.5 h-1.5 rounded-full shrink-0"
                           style={{ backgroundColor: isSelected ? "#fff" : item.color }}
                         />
                       )}
@@ -348,11 +324,11 @@ export default function SettingsView({
             </div>
 
             {/* Difficulty Selector */}
-            <div className="space-y-2">
-              <label className="text-xs font-bold text-neutral-700 dark:text-neutral-300 block">
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-neutral-700 dark:text-neutral-300 block">
                 Difficulty Focus
               </label>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
                 {DIFFICULTY_ITEMS.map((d) => {
                   const isSelected = selectedDifficulty === d.value;
                   return (
@@ -360,9 +336,9 @@ export default function SettingsView({
                       key={d.value}
                       type="button"
                       onClick={() => setSelectedDifficulty(d.value)}
-                      className={`px-3 py-2 rounded-xl text-xs font-semibold border transition text-center flex items-center justify-center gap-1.5 ${
+                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition text-center flex items-center justify-center gap-1.5 ${
                         isSelected
-                          ? "bg-indigo-600 text-white border-indigo-600 shadow-md shadow-indigo-500/20"
+                          ? "bg-indigo-600 text-white border-indigo-600 shadow-xs"
                           : darkMode
                           ? "bg-neutral-950 border-neutral-800 text-neutral-300 hover:border-neutral-700"
                           : "bg-neutral-50 border-neutral-200 text-neutral-700 hover:border-neutral-300"
@@ -370,7 +346,7 @@ export default function SettingsView({
                     >
                       {d.color && (
                         <span
-                          className="w-2 h-2 rounded-full shrink-0"
+                          className="w-1.5 h-1.5 rounded-full shrink-0"
                           style={{ backgroundColor: isSelected ? "#fff" : d.color }}
                         />
                       )}
@@ -381,11 +357,11 @@ export default function SettingsView({
               </div>
             </div>
 
-            {/* Custom Modern Topic Select Dropdown */}
-            <div className="space-y-2" ref={dropdownRef}>
+            {/* Searchable Topic Filter Dropdown */}
+            <div className="space-y-1.5" ref={dropdownRef}>
               <div className="flex items-center justify-between">
-                <label className="text-xs font-bold text-neutral-700 dark:text-neutral-300">
-                  Topic / Concept Filter
+                <label className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">
+                  Concept / Topic Filter
                 </label>
                 {selectedTagId && (
                   <button
@@ -393,18 +369,17 @@ export default function SettingsView({
                     onClick={() => setSelectedTagId(null)}
                     className="text-xs text-indigo-500 hover:underline flex items-center gap-1 font-medium"
                   >
-                    <span>Clear Topic Selection</span>
+                    <span>Clear</span>
                     <FiX className="w-3 h-3" />
                   </button>
                 )}
               </div>
 
-              {/* Trigger Button */}
               <div className="relative">
                 <button
                   type="button"
                   onClick={() => setIsTopicDropdownOpen(!isTopicDropdownOpen)}
-                  className={`w-full flex items-center justify-between px-4 py-2.5 rounded-2xl border text-xs font-semibold transition outline-none ${
+                  className={`w-full flex items-center justify-between px-3 py-2 rounded-xl border text-xs font-semibold transition outline-none ${
                     darkMode
                       ? "bg-neutral-950 border-neutral-800 text-white hover:border-neutral-700"
                       : "bg-neutral-50 border-neutral-300 text-neutral-900 hover:border-neutral-400"
@@ -414,7 +389,7 @@ export default function SettingsView({
                     {selectedTagObj ? (
                       <>
                         <span
-                          className="w-2.5 h-2.5 rounded-full shrink-0"
+                          className="w-2 h-2 rounded-full shrink-0"
                           style={{ backgroundColor: selectedTagObj.color }}
                         />
                         <span className="text-neutral-400 font-normal">
@@ -423,47 +398,43 @@ export default function SettingsView({
                         <span>{selectedTagObj.name}</span>
                       </>
                     ) : (
-                      <span className="text-neutral-500">All Topics & Categories (No Filter)</span>
+                      <span className="text-neutral-400">All Topics & Categories (No Filter)</span>
                     )}
                   </div>
                   <FiChevronDown
-                    className={`w-4 h-4 text-neutral-400 transition-transform duration-200 ${
+                    className={`w-3.5 h-3.5 text-neutral-400 transition-transform duration-150 ${
                       isTopicDropdownOpen ? "rotate-180" : ""
                     }`}
                   />
                 </button>
 
-                {/* Dropdown Menu Popover */}
                 {isTopicDropdownOpen && (
                   <div
-                    className={`absolute left-0 right-0 top-full mt-2 z-50 rounded-2xl border shadow-2xl p-2 max-h-72 flex flex-col transition-all ${
+                    className={`absolute left-0 right-0 top-full mt-1.5 z-40 rounded-xl border shadow-xl p-2 max-h-60 flex flex-col transition-all ${
                       darkMode ? "bg-neutral-900 border-neutral-800" : "bg-white border-neutral-200"
                     }`}
                   >
-                    {/* Search inside dropdown */}
                     <div className="relative mb-2 px-1">
-                      <FiSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-400 w-3.5 h-3.5" />
+                      <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 w-3 h-3" />
                       <input
                         type="text"
                         value={topicDropdownSearch}
                         onChange={(e) => setTopicDropdownSearch(e.target.value)}
-                        placeholder="Search topic or category..."
-                        className={`w-full pl-9 pr-3 py-1.5 rounded-xl text-xs border outline-none font-medium ${
+                        placeholder="Search topic..."
+                        className={`w-full pl-8 pr-2.5 py-1 rounded-lg text-xs border outline-none font-medium ${
                           darkMode ? "bg-neutral-950 border-neutral-800 text-white" : "bg-neutral-50 border-neutral-200 text-neutral-900"
                         }`}
                       />
                     </div>
 
-                    {/* Options List */}
-                    <div className="overflow-y-auto flex-1 space-y-2 pr-1">
-                      {/* Option for All */}
+                    <div className="overflow-y-auto flex-1 space-y-1.5 pr-1">
                       <button
                         type="button"
                         onClick={() => {
                           setSelectedTagId(null);
                           setIsTopicDropdownOpen(false);
                         }}
-                        className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold transition text-left ${
+                        className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs font-medium transition text-left ${
                           !selectedTagId
                             ? "bg-indigo-600 text-white"
                             : darkMode
@@ -475,43 +446,40 @@ export default function SettingsView({
                         {!selectedTagId && <FiCheck className="w-3.5 h-3.5" />}
                       </button>
 
-                      {/* Grouped tags */}
                       {Object.entries(filteredDropdownGroups).map(([group, groupTags]) => (
-                        <div key={group} className="space-y-1 pt-1">
-                          <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider px-2 block">
+                        <div key={group} className="space-y-0.5 pt-1">
+                          <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider block px-2 mb-0.5">
                             {group}
                           </span>
-                          <div className="space-y-0.5">
-                            {groupTags.map((tag) => {
-                              const isSelected = selectedTagId === tag._id;
-                              return (
-                                <button
-                                  key={tag._id}
-                                  type="button"
-                                  onClick={() => {
-                                    setSelectedTagId(tag._id);
-                                    setIsTopicDropdownOpen(false);
-                                  }}
-                                  className={`w-full flex items-center justify-between px-3 py-1.5 rounded-xl text-xs font-medium transition text-left ${
-                                    isSelected
-                                      ? "bg-indigo-600 text-white font-semibold"
-                                      : darkMode
-                                      ? "hover:bg-neutral-800 text-neutral-300"
-                                      : "hover:bg-neutral-100 text-neutral-700"
-                                  }`}
-                                >
-                                  <span className="flex items-center gap-2 truncate">
-                                    <span
-                                      className="w-2.5 h-2.5 rounded-full shrink-0"
-                                      style={{ backgroundColor: tag.color }}
-                                    />
-                                    <span>{tag.name}</span>
-                                  </span>
-                                  {isSelected && <FiCheck className="w-3.5 h-3.5" />}
-                                </button>
-                              );
-                            })}
-                          </div>
+                          {groupTags.map((tag) => {
+                            const isSelected = selectedTagId === tag._id;
+                            return (
+                              <button
+                                key={tag._id}
+                                type="button"
+                                onClick={() => {
+                                  setSelectedTagId(tag._id);
+                                  setIsTopicDropdownOpen(false);
+                                }}
+                                className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs font-medium transition text-left ${
+                                  isSelected
+                                    ? "bg-indigo-600 text-white"
+                                    : darkMode
+                                    ? "hover:bg-neutral-800 text-neutral-300"
+                                    : "hover:bg-neutral-100 text-neutral-700"
+                                }`}
+                              >
+                                <span className="flex items-center gap-1.5 truncate">
+                                  <span
+                                    className="w-1.5 h-1.5 rounded-full shrink-0"
+                                    style={{ backgroundColor: tag.color }}
+                                  />
+                                  <span>{tag.name}</span>
+                                </span>
+                                {isSelected && <FiCheck className="w-3.5 h-3.5 shrink-0" />}
+                              </button>
+                            );
+                          })}
                         </div>
                       ))}
                     </div>
@@ -520,210 +488,155 @@ export default function SettingsView({
               </div>
             </div>
 
-            {/* Bookmark Toggle */}
-            <label className={`flex items-center gap-3 p-3.5 rounded-2xl border cursor-pointer select-none transition ${
-              darkMode ? "border-neutral-800 bg-neutral-950/60 hover:bg-neutral-950" : "border-neutral-200 bg-neutral-50 hover:bg-neutral-100"
-            }`}>
-              <input
-                type="checkbox"
-                checked={favoritesOnly}
-                onChange={(e) => setFavoritesOnly(e.target.checked)}
-                className="w-4 h-4 rounded text-indigo-600 border-neutral-300 focus:ring-indigo-500"
-              />
-              <div className="flex-1">
-                <span className="text-xs font-bold block flex items-center gap-1.5">
-                  <FiStar className="text-amber-500 fill-amber-500 w-3.5 h-3.5" /> Only show Bookmarked Problems
-                </span>
-                <span className="text-[11px] text-neutral-400">
-                  Focus solely on high-priority starred problems
-                </span>
-              </div>
-            </label>
+            {/* Favorite toggle + Save Preset Button */}
+            <div className="flex items-center justify-between pt-2 border-t border-neutral-200 dark:border-neutral-800">
+              <label className="flex items-center gap-2 cursor-pointer select-none text-xs font-semibold text-neutral-700 dark:text-neutral-300">
+                <input
+                  type="checkbox"
+                  checked={favoritesOnly}
+                  onChange={(e) => setFavoritesOnly(e.target.checked)}
+                  className="w-3.5 h-3.5 rounded text-indigo-600 border-neutral-300 focus:ring-indigo-500"
+                />
+                <span>⭐ Bookmarked Problems Only</span>
+              </label>
 
-            {/* Save Action Footer */}
-            <div className="pt-4 border-t border-neutral-200 dark:border-neutral-800 flex items-center justify-between">
-              <div>
-                {savedFeedback && (
-                  <span className="text-emerald-500 text-xs inline-flex items-center gap-1.5 font-bold animate-fadeIn">
-                    <FiCheckCircle className="w-4 h-4" /> View settings saved!
-                  </span>
-                )}
-              </div>
               <button
                 type="button"
                 onClick={handleApplyPreset}
-                className="px-6 py-2.5 rounded-2xl bg-indigo-600 text-white text-xs font-bold hover:bg-indigo-500 transition shadow-lg shadow-indigo-500/25 flex items-center gap-2"
+                className="px-4 py-1.5 rounded-xl bg-indigo-600 text-white text-xs font-semibold hover:bg-indigo-500 transition shadow-xs flex items-center gap-1.5"
               >
-                <FiCheck className="w-4 h-4" /> Apply & Save View
+                <FiCheck className="w-3.5 h-3.5" />
+                <span>Save Preset</span>
               </button>
             </div>
           </div>
         </div>
-      )}
 
-      {/* SECTION 2: TOPICS & TAGS MANAGEMENT */}
-      {activeSection === "tags" && (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Create Topic Form Card */}
+        {/* RIGHT COLUMN: TOPICS DIRECTORY, QUICK CREATE & SYSTEM STATUS (5 cols) */}
+        <div className="lg:col-span-5 space-y-4">
+          {/* Quick Add New Tag */}
           <div
-            className={`p-6 rounded-3xl border shadow-xs space-y-5 ${
-              darkMode ? "bg-neutral-900/90 border-neutral-800" : "bg-white border-neutral-200"
+            className={`p-4 rounded-xl border space-y-3 ${
+              darkMode ? "bg-neutral-900 border-neutral-800" : "bg-white border-neutral-200"
             }`}
           >
-            <div>
-              <h3 className="text-sm font-bold flex items-center gap-2">
-                <FiPlus className="text-indigo-500" /> Create Topic or Tag
-              </h3>
-              <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
-                Add concept tags under Data Structures or Algorithms.
-              </p>
-            </div>
+            <h3 className="text-xs font-bold text-neutral-900 dark:text-white flex items-center gap-2">
+              <FiPlus className="text-indigo-500" /> Create Custom Topic Tag
+            </h3>
 
-            <form onSubmit={handleCreateTag} className="space-y-4">
-              <div>
-                <label className="text-xs font-bold text-neutral-700 dark:text-neutral-300 block mb-1">
-                  Topic Name *
-                </label>
+            <form onSubmit={handleCreateTagSubmit} className="space-y-2.5">
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="text-[10px] text-neutral-400 block mb-0.5">Parent Category</label>
+                  <select
+                    value={newTagGroup}
+                    onChange={(e) => setNewTagGroup(e.target.value)}
+                    className={`w-full px-2.5 py-1.5 rounded-lg text-xs border outline-none font-medium ${
+                      darkMode ? "bg-neutral-950 border-neutral-800 text-white" : "bg-neutral-50 border-neutral-200 text-neutral-900"
+                    }`}
+                  >
+                    {PARENT_GROUPS.map((g) => (
+                      <option key={g} value={g}>
+                        {g}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-[10px] text-neutral-400 block mb-0.5">Tag Name</label>
+                  <input
+                    type="text"
+                    required
+                    value={newTagName}
+                    onChange={(e) => setNewTagName(e.target.value)}
+                    placeholder="e.g. Monotonic Stack"
+                    className={`w-full px-2.5 py-1.5 rounded-lg text-xs border outline-none font-medium ${
+                      darkMode ? "bg-neutral-950 border-neutral-800 text-white" : "bg-neutral-50 border-neutral-200 text-neutral-900"
+                    }`}
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between gap-2 pt-1">
                 <input
-                  type="text"
-                  required
-                  value={newTagName}
-                  onChange={(e) => setNewTagName(e.target.value)}
-                  placeholder="e.g. Disjoint Set Union, Segment Tree"
-                  className={`w-full px-3.5 py-2.5 rounded-xl text-xs border outline-none font-medium transition ${
-                    darkMode
-                      ? "bg-neutral-950 border-neutral-800 text-white focus:border-indigo-500"
-                      : "bg-neutral-50 border-neutral-300 text-neutral-900 focus:border-indigo-500"
-                  }`}
+                  type="color"
+                  value={newTagColor}
+                  onChange={(e) => setNewTagColor(e.target.value)}
+                  className="w-7 h-7 rounded border-none cursor-pointer bg-transparent"
+                  title="Tag color"
                 />
-              </div>
 
-              <div>
-                <label className="text-xs font-bold text-neutral-700 dark:text-neutral-300 block mb-1">
-                  Parent Category
-                </label>
-                <div className="grid grid-cols-2 gap-1.5">
-                  {PARENT_GROUPS.map((g) => (
-                    <button
-                      key={g}
-                      type="button"
-                      onClick={() => setNewTagGroup(g)}
-                      className={`px-3 py-2 rounded-xl text-xs font-semibold border transition text-center ${
-                        newTagGroup === g
-                          ? "bg-indigo-600 text-white border-indigo-600 shadow-sm"
-                          : darkMode
-                          ? "bg-neutral-950 border-neutral-800 text-neutral-300 hover:border-neutral-700"
-                          : "bg-neutral-50 border-neutral-200 text-neutral-700 hover:border-neutral-300"
-                      }`}
-                    >
-                      {g}
-                    </button>
-                  ))}
-                </div>
+                <button
+                  type="submit"
+                  className="px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-indigo-600 text-white hover:bg-indigo-500 transition shadow-xs flex items-center gap-1.5"
+                >
+                  <FiPlus className="w-3.5 h-3.5" />
+                  <span>Add Tag</span>
+                </button>
               </div>
-
-              <div>
-                <label className="text-xs font-bold text-neutral-700 dark:text-neutral-300 block mb-2">
-                  Color Tag
-                </label>
-                <div className="flex items-center gap-2 flex-wrap">
-                  {PRESET_COLORS.map((c) => (
-                    <button
-                      type="button"
-                      key={c}
-                      onClick={() => setNewTagColor(c)}
-                      style={{ backgroundColor: c }}
-                      className={`w-6 h-6 rounded-full transition transform ${
-                        newTagColor === c ? "scale-125 ring-2 ring-white" : "hover:scale-110"
-                      }`}
-                    />
-                  ))}
-                </div>
-              </div>
-
-              <button
-                type="submit"
-                className="w-full py-2.5 px-4 rounded-xl bg-indigo-600 text-white text-xs font-bold hover:bg-indigo-500 transition shadow-md shadow-indigo-500/20 flex items-center justify-center gap-2 mt-2"
-              >
-                <FiPlus className="w-3.5 h-3.5" /> Add Topic to Collection
-              </button>
             </form>
           </div>
 
-          {/* Tag Directory */}
+          {/* Manage Tags Directory */}
           <div
-            className={`lg:col-span-2 p-6 rounded-3xl border shadow-xs space-y-4 ${
-              darkMode ? "bg-neutral-900/90 border-neutral-800" : "bg-white border-neutral-200"
+            className={`p-4 rounded-xl border space-y-3 ${
+              darkMode ? "bg-neutral-900 border-neutral-800" : "bg-white border-neutral-200"
             }`}
           >
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-neutral-200 dark:border-neutral-800 pb-3">
-              <div>
-                <h3 className="text-sm font-bold flex items-center gap-2">
-                  <FiLayers className="text-indigo-500" /> Topic Directory ({tags.length})
-                </h3>
-                <p className="text-xs text-neutral-500 dark:text-neutral-400">
-                  Organized by parent category.
-                </p>
-              </div>
-
-              <div className="relative w-full sm:w-56">
-                <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 w-3.5 h-3.5" />
-                <input
-                  type="text"
-                  value={tagDirectorySearch}
-                  onChange={(e) => setTagDirectorySearch(e.target.value)}
-                  placeholder="Filter topics..."
-                  className={`w-full pl-9 pr-3 py-1.5 rounded-xl text-xs border outline-none font-medium ${
-                    darkMode ? "bg-neutral-950 border-neutral-800 text-white" : "bg-neutral-50 border-neutral-200 text-neutral-900"
-                  }`}
-                />
-              </div>
+            <div className="flex items-center justify-between">
+              <h3 className="text-xs font-bold text-neutral-900 dark:text-white flex items-center gap-1.5">
+                <FiFolder className="text-indigo-500" />
+                <span>Configured Topics ({tags?.length || 0})</span>
+              </h3>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[520px] overflow-y-auto pr-1">
-              {Object.entries(groupedTags).map(([group, groupTags]) => {
-                const visibleInGroup = groupTags.filter((t) =>
-                  tagDirectorySearch.trim()
-                    ? t.name.toLowerCase().includes(tagDirectorySearch.toLowerCase())
-                    : true
-                );
+            <div className="relative">
+              <FiSearch className="absolute left-2.5 top-1/2 -translate-y-1/2 text-neutral-400 w-3 h-3" />
+              <input
+                type="text"
+                value={tagDirectorySearch}
+                onChange={(e) => setTagDirectorySearch(e.target.value)}
+                placeholder="Filter tag directory..."
+                className={`w-full pl-8 pr-2.5 py-1 rounded-lg text-xs border outline-none font-medium ${
+                  darkMode ? "bg-neutral-950 border-neutral-800 text-white" : "bg-neutral-50 border-neutral-200 text-neutral-900"
+                }`}
+              />
+            </div>
 
-                if (visibleInGroup.length === 0) return null;
+            <div className="max-h-56 overflow-y-auto space-y-2 pr-1">
+              {Object.entries(groupedTags).map(([group, groupTags]) => {
+                const filtered = groupTags.filter((t) =>
+                  t.name.toLowerCase().includes(tagDirectorySearch.toLowerCase().trim())
+                );
+                if (filtered.length === 0) return null;
 
                 return (
-                  <div
-                    key={group}
-                    className={`p-3.5 rounded-2xl border ${
-                      darkMode ? "bg-neutral-950/70 border-neutral-800" : "bg-neutral-50 border-neutral-200"
-                    }`}
-                  >
-                    <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                      <FiFolder className="text-indigo-500" /> {group}
+                  <div key={group} className="space-y-1">
+                    <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider block">
+                      {group}
                     </span>
-                    <div className="space-y-1">
-                      {visibleInGroup.map((tag) => (
-                        <div
+                    <div className="flex flex-wrap gap-1">
+                      {filtered.map((tag) => (
+                        <span
                           key={tag._id}
-                          className="flex items-center justify-between text-xs py-1.5 px-2 rounded-xl hover:bg-neutral-200/50 dark:hover:bg-neutral-800 transition"
+                          className="text-[10px] font-medium px-2 py-0.5 rounded-md border flex items-center gap-1.5"
+                          style={{
+                            backgroundColor: `${tag.color}15`,
+                            borderColor: `${tag.color}35`,
+                            color: tag.color,
+                          }}
                         >
-                          <span className="flex items-center gap-2 truncate">
-                            <span
-                              className="w-2.5 h-2.5 rounded-full shrink-0"
-                              style={{ backgroundColor: tag.color }}
-                            />
-                            <span className="font-semibold text-neutral-800 dark:text-neutral-200">
-                              {tag.name}
-                            </span>
-                          </span>
+                          <span>{tag.name}</span>
                           <button
                             type="button"
                             onClick={() => onDeleteTag(tag._id)}
-                            className="text-neutral-400 hover:text-rose-500 p-1 transition"
-                            title="Delete Tag"
+                            className="opacity-50 hover:opacity-100 hover:text-rose-500 transition"
+                            title="Delete"
                           >
-                            <FiTrash2 className="w-3.5 h-3.5" />
+                            <FiTrash2 className="w-2.5 h-2.5" />
                           </button>
-                        </div>
+                        </span>
                       ))}
                     </div>
                   </div>
@@ -731,108 +644,24 @@ export default function SettingsView({
               })}
             </div>
           </div>
-        </div>
-      )}
 
-      {/* SECTION 3: BACKUP & DATA EXPORT */}
-      {activeSection === "data" && (
-        <div
-          className={`p-5 rounded-xl border space-y-4 ${
-            darkMode ? "bg-neutral-900 border-neutral-800" : "bg-white border-neutral-200"
-          }`}
-        >
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-neutral-200 dark:border-neutral-800 pb-3">
-            <div>
-              <h3 className="text-xs font-bold flex items-center gap-2 text-neutral-900 dark:text-white">
-                <FiDownload className="text-indigo-500" /> Backup & Bulk JSON
-              </h3>
-            </div>
-
-            <div className="flex items-center gap-2 shrink-0">
-              {onOpenJsonEditor && (
-                <button
-                  onClick={onOpenJsonEditor}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition flex items-center gap-1.5 ${
-                    darkMode
-                      ? "border-neutral-800 bg-neutral-950 text-neutral-200 hover:border-neutral-700"
-                      : "border-neutral-200 bg-neutral-50 text-neutral-800 hover:border-neutral-300"
-                  }`}
-                >
-                  <FiCode className="w-3.5 h-3.5 text-indigo-500" />
-                  <span>Bulk JSON Editor</span>
-                </button>
-              )}
-
-              <button
-                onClick={handleExportBackup}
-                className="px-3.5 py-1.5 rounded-lg bg-indigo-600 text-white text-xs font-semibold hover:bg-indigo-500 transition shadow-xs flex items-center gap-1.5"
-              >
-                <FiDownload className="w-3.5 h-3.5" />
-                <span>Export Backup</span>
-              </button>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div
-              className={`p-4 rounded-xl border ${
-                darkMode ? "bg-neutral-950 border-neutral-800" : "bg-neutral-50 border-neutral-200"
-              }`}
-            >
-              <span className="text-[11px] font-bold text-neutral-400 uppercase tracking-wider block mb-0.5">
-                Problems Stored
-              </span>
-              <span className="text-xl font-bold text-indigo-500">{problems?.length || 0}</span>
-            </div>
-
-            <div
-              className={`p-4 rounded-xl border ${
-                darkMode ? "bg-neutral-950 border-neutral-800" : "bg-neutral-50 border-neutral-200"
-              }`}
-            >
-              <span className="text-[11px] font-bold text-neutral-400 uppercase tracking-wider block mb-0.5">
-                Topic Tags
-              </span>
-              <span className="text-xl font-bold text-emerald-500">{tags?.length || 0}</span>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* SECTION 4: SYSTEM & ENDPOINTS */}
-      {activeSection === "system" && (
-        <div
-          className={`p-5 rounded-xl border space-y-4 ${
-            darkMode ? "bg-neutral-900 border-neutral-800" : "bg-white border-neutral-200"
-          }`}
-        >
-          <div className="border-b border-neutral-200 dark:border-neutral-800 pb-3">
-            <h3 className="text-xs font-bold flex items-center gap-2 text-neutral-900 dark:text-white">
-              <FiServer className="text-indigo-500" /> Connection & Environment
-            </h3>
-          </div>
-
-          <div className="space-y-2 font-mono text-xs">
-            <div
-              className={`p-3 rounded-xl border flex items-center justify-between ${
-                darkMode ? "bg-neutral-950 border-neutral-800 text-neutral-300" : "bg-neutral-50 border-neutral-200 text-neutral-700"
-              }`}
-            >
-              <span className="text-neutral-400 font-sans text-xs">API URL</span>
+          {/* System & API connection status */}
+          <div
+            className={`p-3.5 rounded-xl border font-mono text-[11px] space-y-1.5 ${
+              darkMode ? "bg-neutral-900 border-neutral-800 text-neutral-300" : "bg-white border-neutral-200 text-neutral-700"
+            }`}
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-neutral-400 font-sans">API Endpoint:</span>
               <span className="text-indigo-500 font-semibold">{import.meta.env.API_BASE_URL || "http://localhost:5001"}</span>
             </div>
-
-            <div
-              className={`p-3 rounded-xl border flex items-center justify-between ${
-                darkMode ? "bg-neutral-950 border-neutral-800 text-neutral-300" : "bg-neutral-50 border-neutral-200 text-neutral-700"
-              }`}
-            >
-              <span className="text-neutral-400 font-sans text-xs">Database</span>
+            <div className="flex items-center justify-between">
+              <span className="text-neutral-400 font-sans">Database:</span>
               <span className="text-emerald-500 font-semibold">dsa_sheet</span>
             </div>
           </div>
         </div>
-      )}
+      </div>
     </div>
   );
 }

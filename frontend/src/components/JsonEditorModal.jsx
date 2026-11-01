@@ -5,7 +5,10 @@ import {
   FiUpload,
   FiCheck,
   FiAlertTriangle,
-  FiCopy
+  FiCopy,
+  FiFileText,
+  FiMaximize2,
+  FiMinimize2
 } from "react-icons/fi";
 import { bulkSyncProblems } from "../api";
 
@@ -15,6 +18,7 @@ const SAMPLE_JSON = [
     "difficulty": "Easy",
     "status": "Solved",
     "isFavorite": true,
+    "description": "Find indices of two numbers that add up to target.",
     "links": [
       {
         "platform": "LeetCode",
@@ -43,12 +47,13 @@ export default function JsonEditorModal({ isOpen, onClose, currentProblems, onSy
   const [error, setError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
   const [copied, setCopied] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
   // Initialize editor with current problems on open
   useEffect(() => {
     if (isOpen) {
       if (currentProblems && currentProblems.length > 0) {
-        // Strip __v and clean formatting for readable editing
+        // Clean formatting for readable editing
         const cleanProblems = currentProblems.map(({ _id, title, difficulty, status, isFavorite, revisionCount, description, links, tags, solutions, personalNotes }) => ({
           _id,
           title,
@@ -133,71 +138,93 @@ export default function JsonEditorModal({ isOpen, onClose, currentProblems, onSy
     }
   };
 
+  // Quick stats computed live
+  let problemCount = 0;
+  let isValidJson = true;
+  try {
+    const parsed = JSON.parse(jsonText);
+    if (Array.isArray(parsed)) problemCount = parsed.length;
+  } catch {
+    isValidJson = false;
+  }
+
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/80 backdrop-blur-md transition-all animate-fadeIn"
+      className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/75 backdrop-blur-xs transition-all animate-fadeIn"
       onClick={onClose}
     >
       <div
-        className={`relative w-full max-w-5xl h-[90vh] flex flex-col rounded-3xl border shadow-2xl overflow-hidden ${
+        className={`relative w-full ${
+          isFullscreen ? "h-[98vh] max-w-[98vw]" : "h-[90vh] max-w-5xl"
+        } flex flex-col rounded-2xl border shadow-2xl overflow-hidden transition-all duration-150 ${
           darkMode ? "bg-neutral-900 border-neutral-800 text-white" : "bg-white border-neutral-200 text-neutral-900"
         }`}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Modal Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-200 dark:border-neutral-800">
-          <div className="flex items-center gap-3">
-            <span className="p-2 rounded-xl bg-indigo-50 dark:bg-neutral-800 text-indigo-600 dark:text-indigo-400">
-              <FiCode className="w-5 h-5" />
-            </span>
+        {/* Header Bar */}
+        <div className="flex items-center justify-between px-5 py-3 border-b border-neutral-200 dark:border-neutral-800">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-indigo-600/10 border border-indigo-500/20 text-indigo-500 flex items-center justify-center">
+              <FiCode className="w-4 h-4" />
+            </div>
             <div>
-              <h2 className="text-base font-extrabold tracking-tight">Bulk JSON Problem Editor & Importer</h2>
-              <p className="text-xs text-neutral-500 dark:text-neutral-400">
-                View, batch-edit, or import multiple problems, solutions, and links directly via JSON.
-              </p>
+              <h2 className="text-sm font-bold tracking-tight">Bulk JSON Editor</h2>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5">
             <button
               onClick={handleCopy}
-              className="px-3 py-1.5 rounded-xl border border-neutral-200 dark:border-neutral-800 text-xs font-semibold hover:bg-neutral-100 dark:hover:bg-neutral-800 transition flex items-center gap-1.5"
+              className={`px-2.5 py-1 rounded-lg border text-xs font-medium transition flex items-center gap-1 ${
+                darkMode ? "border-neutral-800 hover:bg-neutral-800" : "border-neutral-200 hover:bg-neutral-100"
+              }`}
             >
-              <FiCopy className="w-3.5 h-3.5" />
-              <span>{copied ? "Copied!" : "Copy JSON"}</span>
+              <FiCopy className="w-3 h-3 text-neutral-400" />
+              <span>{copied ? "Copied" : "Copy"}</span>
             </button>
 
             <button
               onClick={handleFormatJson}
-              className="px-3 py-1.5 rounded-xl border border-neutral-200 dark:border-neutral-800 text-xs font-semibold hover:bg-neutral-100 dark:hover:bg-neutral-800 transition"
-              title="Validate and reformat JSON indentation"
+              className={`px-2.5 py-1 rounded-lg border text-xs font-medium transition ${
+                darkMode ? "border-neutral-800 hover:bg-neutral-800" : "border-neutral-200 hover:bg-neutral-100"
+              }`}
             >
               Format JSON
             </button>
 
             <button
               onClick={handleLoadSample}
-              className="px-3 py-1.5 rounded-xl border border-neutral-200 dark:border-neutral-800 text-xs font-semibold hover:bg-neutral-100 dark:hover:bg-neutral-800 transition"
-              title="Insert sample structure"
+              className={`px-2.5 py-1 rounded-lg border text-xs font-medium transition hidden sm:inline-block ${
+                darkMode ? "border-neutral-800 hover:bg-neutral-800" : "border-neutral-200 hover:bg-neutral-100"
+              }`}
             >
-              Insert Sample
+              Load Template
+            </button>
+
+            <button
+              onClick={() => setIsFullscreen(!isFullscreen)}
+              className="p-1.5 rounded-lg text-neutral-400 hover:text-white hover:bg-neutral-800 transition"
+              title={isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
+            >
+              {isFullscreen ? <FiMinimize2 className="w-3.5 h-3.5" /> : <FiMaximize2 className="w-3.5 h-3.5" />}
             </button>
 
             <button
               onClick={onClose}
-              className="p-1.5 rounded-xl text-neutral-400 hover:text-neutral-900 dark:hover:text-white transition"
+              className="p-1.5 rounded-lg text-neutral-400 hover:text-white hover:bg-neutral-800 transition"
             >
-              <FiX className="w-5 h-5" />
+              <FiX className="w-4 h-4" />
             </button>
           </div>
         </div>
 
-        {/* Toolbar: Mode Selector */}
-        <div className={`px-6 py-3 border-b flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs ${
-          darkMode ? "bg-neutral-950/70 border-neutral-800" : "bg-neutral-50/80 border-neutral-200"
+        {/* Toolbar Row */}
+        <div className={`px-5 py-2.5 border-b flex items-center justify-between gap-3 text-xs ${
+          darkMode ? "bg-neutral-950/70 border-neutral-800" : "bg-neutral-50 border-neutral-200"
         }`}>
           <div className="flex items-center gap-3">
-            <span className="font-bold text-neutral-500">Sync Mode:</span>
+            <span className="font-semibold text-neutral-400">Mode:</span>
+
             <label className="flex items-center gap-1.5 cursor-pointer font-medium">
               <input
                 type="radio"
@@ -207,7 +234,7 @@ export default function JsonEditorModal({ isOpen, onClose, currentProblems, onSy
                 onChange={() => setMode("upsert")}
                 className="text-indigo-600 focus:ring-indigo-500"
               />
-              <span>Smart Merge / Upsert (Update existing + add new)</span>
+              <span>Smart Upsert (Merge)</span>
             </label>
 
             <label className="flex items-center gap-1.5 cursor-pointer font-medium text-rose-500">
@@ -219,65 +246,67 @@ export default function JsonEditorModal({ isOpen, onClose, currentProblems, onSy
                 onChange={() => setMode("replace")}
                 className="text-rose-600 focus:ring-rose-500"
               />
-              <span>Replace Entire Vault</span>
+              <span>Replace All</span>
             </label>
           </div>
 
-          <div className="text-[11px] text-neutral-400">
-            Tip: Keep <code className="text-indigo-400 font-mono">_id</code> to update existing problems in-place.
+          <div className="flex items-center gap-3 font-mono text-[11px]">
+            <span className={isValidJson ? "text-emerald-500 font-semibold" : "text-rose-500 font-semibold"}>
+              {isValidJson ? `Valid JSON (${problemCount} problems)` : "Syntax Error"}
+            </span>
           </div>
         </div>
 
-        {/* Feedback Alerts */}
+        {/* Status Alerts */}
         {error && (
-          <div className="mx-6 mt-3 p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 text-xs flex items-center gap-2">
-            <FiAlertTriangle className="w-4 h-4 shrink-0" />
+          <div className="mx-5 mt-2.5 p-2.5 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-500 text-xs flex items-center gap-2">
+            <FiAlertTriangle className="w-3.5 h-3.5 shrink-0" />
             <span>{error}</span>
           </div>
         )}
 
         {successMessage && (
-          <div className="mx-6 mt-3 p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs flex items-center gap-2">
-            <FiCheck className="w-4 h-4 shrink-0" />
+          <div className="mx-5 mt-2.5 p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 text-xs flex items-center gap-2">
+            <FiCheck className="w-3.5 h-3.5 shrink-0" />
             <span>{successMessage}</span>
           </div>
         )}
 
-        {/* Code / JSON Textarea */}
-        <div className="flex-1 p-6 overflow-hidden flex flex-col">
+        {/* JSON Editor Textarea */}
+        <div className="flex-1 p-4 sm:p-5 overflow-hidden flex flex-col">
           <textarea
             value={jsonText}
             onChange={(e) => setJsonText(e.target.value)}
             spellCheck="false"
-            className={`w-full flex-1 p-4 rounded-2xl font-mono text-xs leading-relaxed outline-none border resize-none overflow-y-auto ${
+            className={`w-full flex-1 p-3.5 rounded-xl font-mono text-xs leading-relaxed outline-none border resize-none overflow-y-auto ${
               darkMode
                 ? "bg-neutral-950 border-neutral-800 text-emerald-400 focus:border-indigo-500"
-                : "bg-neutral-50 border-neutral-300 text-neutral-900 focus:border-indigo-500"
+                : "bg-neutral-50 border-neutral-200 text-neutral-900 focus:border-indigo-500"
             }`}
-            placeholder="// Paste or edit problem JSON array here..."
+            placeholder="// Paste or edit problem JSON array..."
           />
         </div>
 
         {/* Modal Footer */}
-        <div className="flex items-center justify-between px-6 py-4 border-t border-neutral-200 dark:border-neutral-800">
-          <span className="text-xs text-neutral-400">
-            Array of problem objects with <code className="text-indigo-400 font-mono">title</code>, <code className="text-indigo-400 font-mono">solutions</code>, <code className="text-indigo-400 font-mono">links</code>, <code className="text-indigo-400 font-mono">difficulty</code>, <code className="text-indigo-400 font-mono">status</code>.
+        <div className="flex items-center justify-between px-5 py-3 border-t border-neutral-200 dark:border-neutral-800">
+          <span className="text-[11px] text-neutral-400">
+            Fields supported: <code className="text-indigo-400">title</code>, <code className="text-indigo-400">difficulty</code>, <code className="text-indigo-400">status</code>, <code className="text-indigo-400">links</code>, <code className="text-indigo-400">solutions</code>.
           </span>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             <button
               onClick={onClose}
-              className="px-4 py-2 rounded-xl text-xs font-semibold border border-neutral-300 dark:border-neutral-700 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition"
+              className="px-3.5 py-1.5 rounded-xl text-xs font-medium border border-neutral-200 dark:border-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition"
             >
               Cancel
             </button>
             <button
               onClick={handleApplySync}
               disabled={loading}
-              className="px-6 py-2 rounded-xl bg-indigo-600 text-white text-xs font-bold hover:bg-indigo-500 transition shadow-lg shadow-indigo-500/25 flex items-center gap-2 disabled:opacity-50"
+              className="px-4 py-1.5 rounded-xl bg-indigo-600 text-white text-xs font-semibold hover:bg-indigo-500 transition shadow-xs flex items-center gap-1.5 disabled:opacity-50"
             >
               <FiUpload className="w-3.5 h-3.5" />
-              <span>{loading ? "Applying Sync..." : "Save & Sync Problems"}</span>
+              <span>{loading ? "Syncing..." : "Sync Problems"}</span>
             </button>
           </div>
         </div>
@@ -285,4 +314,3 @@ export default function JsonEditorModal({ isOpen, onClose, currentProblems, onSy
     </div>
   );
 }
-
