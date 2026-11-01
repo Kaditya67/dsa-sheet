@@ -209,80 +209,74 @@ export default function SettingsView({
   return (
     <div className="space-y-6 max-w-5xl mx-auto animate-fadeIn">
       {/* Header bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-neutral-200 dark:border-neutral-800 pb-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-neutral-200 dark:border-neutral-800 pb-3">
         <div>
-          <h2 className="text-xl font-extrabold tracking-tight flex items-center gap-2 text-neutral-900 dark:text-white">
-            <span className="p-2 rounded-xl bg-indigo-50 dark:bg-neutral-800 text-indigo-600 dark:text-indigo-400">
-              <FiSliders className="w-5 h-5" />
-            </span>
-            <span>Settings & Preferences</span>
+          <h2 className="text-base font-bold tracking-tight flex items-center gap-2 text-neutral-900 dark:text-white">
+            <FiSliders className="w-4 h-4 text-indigo-500" />
+            <span>Settings</span>
           </h2>
-          <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">
-            Configure default problem views, manage custom topics, and export backups.
-          </p>
         </div>
 
         {/* Sub-tab pills */}
-        <div className="flex items-center gap-1.5 p-1 rounded-2xl bg-neutral-200/60 dark:bg-neutral-900 border border-neutral-300/60 dark:border-neutral-800">
+        <div className={`flex items-center gap-1 p-1 rounded-xl border ${darkMode ? "bg-neutral-900 border-neutral-800" : "bg-neutral-100 border-neutral-200"}`}>
           <button
             onClick={() => setActiveSection("presets")}
-            className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition ${
+            className={`px-3 py-1 rounded-lg text-xs font-medium transition ${
               activeSection === "presets"
-                ? "bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white shadow-sm"
-                : "text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white"
+                ? "bg-indigo-600 text-white shadow-xs"
+                : "text-neutral-500 hover:text-neutral-900 dark:hover:text-white"
             }`}
           >
-            View Presets
+            Filter Presets
           </button>
           <button
             onClick={() => setActiveSection("tags")}
-            className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition ${
+            className={`px-3 py-1 rounded-lg text-xs font-medium transition ${
               activeSection === "tags"
-                ? "bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white shadow-sm"
-                : "text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white"
+                ? "bg-indigo-600 text-white shadow-xs"
+                : "text-neutral-500 hover:text-neutral-900 dark:hover:text-white"
             }`}
           >
             Topics ({tags.length})
           </button>
           <button
             onClick={() => setActiveSection("data")}
-            className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition ${
+            className={`px-3 py-1 rounded-lg text-xs font-medium transition ${
               activeSection === "data"
-                ? "bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white shadow-sm"
-                : "text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white"
+                ? "bg-indigo-600 text-white shadow-xs"
+                : "text-neutral-500 hover:text-neutral-900 dark:hover:text-white"
             }`}
           >
-            Backup
+            Backup & JSON
           </button>
           <button
             onClick={() => setActiveSection("system")}
-            className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition ${
+            className={`px-3 py-1 rounded-lg text-xs font-medium transition ${
               activeSection === "system"
-                ? "bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white shadow-sm"
-                : "text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white"
+                ? "bg-indigo-600 text-white shadow-xs"
+                : "text-neutral-500 hover:text-neutral-900 dark:hover:text-white"
             }`}
           >
-            Connection
+            Server
           </button>
         </div>
       </div>
 
       {/* SECTION 1: FILTER PRESETS */}
       {activeSection === "presets" && (
-        <div className="space-y-6">
+        <div className="space-y-4">
           {/* Quick Preset Buttons */}
           <div
-            className={`p-5 rounded-3xl border shadow-xs ${
-              darkMode ? "bg-neutral-900/90 border-neutral-800" : "bg-white border-neutral-200"
+            className={`p-4 rounded-xl border ${
+              darkMode ? "bg-neutral-900 border-neutral-800" : "bg-white border-neutral-200"
             }`}
           >
-            <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center justify-between mb-2">
               <span className="text-[11px] font-bold text-neutral-400 uppercase tracking-wider">
-                Instant Quick-Focus Presets
+                Quick-Focus Presets
               </span>
-              <span className="text-[11px] text-neutral-400">Click to activate immediately</span>
             </div>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-1.5">
               {QUICK_PRESETS.map((qp, idx) => {
                 const isActive =
                   selectedStatus === qp.preset.status &&
@@ -293,9 +287,9 @@ export default function SettingsView({
                   <button
                     key={idx}
                     onClick={() => handleQuickPresetClick(qp.preset)}
-                    className={`text-xs px-3.5 py-2 rounded-xl border font-semibold transition flex items-center gap-1.5 ${
+                    className={`text-xs px-3 py-1.5 rounded-lg border font-medium transition flex items-center gap-1.5 ${
                       isActive
-                        ? "bg-indigo-600 text-white border-indigo-600 shadow-md shadow-indigo-500/20"
+                        ? "bg-indigo-600 text-white border-indigo-600 shadow-xs"
                         : darkMode
                         ? "bg-neutral-950 border-neutral-800 text-neutral-300 hover:border-neutral-700 hover:bg-neutral-900"
                         : "bg-neutral-50 border-neutral-200 text-neutral-700 hover:border-neutral-300 hover:bg-neutral-100"
@@ -311,23 +305,18 @@ export default function SettingsView({
 
           {/* Custom Filter Setting */}
           <div
-            className={`p-6 sm:p-7 rounded-3xl border shadow-xs space-y-6 ${
-              darkMode ? "bg-neutral-900/90 border-neutral-800" : "bg-white border-neutral-200"
+            className={`p-5 rounded-xl border space-y-4 ${
+              darkMode ? "bg-neutral-900 border-neutral-800" : "bg-white border-neutral-200"
             }`}
           >
-            <div className="flex items-center justify-between border-b border-neutral-200 dark:border-neutral-800 pb-4">
-              <div>
-                <h3 className="text-sm font-bold flex items-center gap-2">
-                  <FiFilter className="text-indigo-500" /> Custom Problem Directory Filter
-                </h3>
-                <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
-                  Set the default view parameters. The main Problems tab will display according to these rules.
-                </p>
-              </div>
+            <div className="flex items-center justify-between border-b border-neutral-200 dark:border-neutral-800 pb-3">
+              <h3 className="text-xs font-bold flex items-center gap-2 text-neutral-900 dark:text-white">
+                <FiFilter className="text-indigo-500" /> Directory Filters
+              </h3>
 
               <button
                 onClick={handleResetFilters}
-                className="text-xs px-3 py-1.5 rounded-lg border border-neutral-200 dark:border-neutral-800 text-neutral-500 hover:text-neutral-900 dark:hover:text-white font-medium inline-flex items-center gap-1.5 transition"
+                className="text-[11px] px-2.5 py-1 rounded-md border border-neutral-200 dark:border-neutral-800 text-neutral-500 hover:text-neutral-900 dark:hover:text-white font-medium inline-flex items-center gap-1 transition"
               >
                 <FiRotateCcw className="w-3 h-3" /> Reset
               </button>
@@ -757,70 +746,63 @@ export default function SettingsView({
       {/* SECTION 3: BACKUP & DATA EXPORT */}
       {activeSection === "data" && (
         <div
-          className={`p-6 sm:p-7 rounded-3xl border shadow-xs space-y-6 ${
-            darkMode ? "bg-neutral-900/90 border-neutral-800" : "bg-white border-neutral-200"
+          className={`p-5 rounded-xl border space-y-4 ${
+            darkMode ? "bg-neutral-900 border-neutral-800" : "bg-white border-neutral-200"
           }`}
         >
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-neutral-200 dark:border-neutral-800 pb-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-neutral-200 dark:border-neutral-800 pb-3">
             <div>
-              <h3 className="text-sm font-bold flex items-center gap-2">
-                <FiDownload className="text-indigo-500" /> Backup, Export & Bulk JSON
+              <h3 className="text-xs font-bold flex items-center gap-2 text-neutral-900 dark:text-white">
+                <FiDownload className="text-indigo-500" /> Backup & Bulk JSON
               </h3>
-              <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
-                Download an offline backup, or bulk edit and import problems and structures using the JSON Editor.
-              </p>
             </div>
 
             <div className="flex items-center gap-2 shrink-0">
               {onOpenJsonEditor && (
                 <button
                   onClick={onOpenJsonEditor}
-                  className={`px-4 py-2.5 rounded-2xl text-xs font-bold border transition flex items-center gap-2 ${
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition flex items-center gap-1.5 ${
                     darkMode
-                      ? "border-neutral-700 bg-neutral-800 text-white hover:border-indigo-500 hover:text-indigo-400"
-                      : "border-neutral-300 bg-white text-neutral-800 hover:border-indigo-500 hover:text-indigo-600 shadow-sm"
+                      ? "border-neutral-800 bg-neutral-950 text-neutral-200 hover:border-neutral-700"
+                      : "border-neutral-200 bg-neutral-50 text-neutral-800 hover:border-neutral-300"
                   }`}
                 >
-                  <FiCode className="w-4 h-4 text-indigo-500" /> Bulk JSON Editor
+                  <FiCode className="w-3.5 h-3.5 text-indigo-500" />
+                  <span>Bulk JSON Editor</span>
                 </button>
               )}
 
               <button
                 onClick={handleExportBackup}
-                className="px-5 py-2.5 rounded-2xl bg-indigo-600 text-white text-xs font-bold hover:bg-indigo-500 transition shadow-lg shadow-indigo-500/25 flex items-center gap-2"
+                className="px-3.5 py-1.5 rounded-lg bg-indigo-600 text-white text-xs font-semibold hover:bg-indigo-500 transition shadow-xs flex items-center gap-1.5"
               >
-                <FiDownload className="w-4 h-4" /> Download Backup
+                <FiDownload className="w-3.5 h-3.5" />
+                <span>Export Backup</span>
               </button>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div
-              className={`p-5 rounded-2xl border ${
+              className={`p-4 rounded-xl border ${
                 darkMode ? "bg-neutral-950 border-neutral-800" : "bg-neutral-50 border-neutral-200"
               }`}
             >
-              <span className="text-xs font-bold text-neutral-400 uppercase tracking-wider block mb-1">
+              <span className="text-[11px] font-bold text-neutral-400 uppercase tracking-wider block mb-0.5">
                 Problems Stored
               </span>
-              <span className="text-2xl font-black text-indigo-500">{problems?.length || 0}</span>
-              <p className="text-[11px] text-neutral-400 mt-2">
-                Includes all approach variations, time/space complexities, and personal edge case notes.
-              </p>
+              <span className="text-xl font-bold text-indigo-500">{problems?.length || 0}</span>
             </div>
 
             <div
-              className={`p-5 rounded-2xl border ${
+              className={`p-4 rounded-xl border ${
                 darkMode ? "bg-neutral-950 border-neutral-800" : "bg-neutral-50 border-neutral-200"
               }`}
             >
-              <span className="text-xs font-bold text-neutral-400 uppercase tracking-wider block mb-1">
-                Topic Tags Configured
+              <span className="text-[11px] font-bold text-neutral-400 uppercase tracking-wider block mb-0.5">
+                Topic Tags
               </span>
-              <span className="text-2xl font-black text-emerald-500">{tags?.length || 0}</span>
-              <p className="text-[11px] text-neutral-400 mt-2">
-                Includes all categorized Data Structures, Algorithms, and standalone tags.
-              </p>
+              <span className="text-xl font-bold text-emerald-500">{tags?.length || 0}</span>
             </div>
           </div>
         </div>
@@ -829,45 +811,33 @@ export default function SettingsView({
       {/* SECTION 4: SYSTEM & ENDPOINTS */}
       {activeSection === "system" && (
         <div
-          className={`p-6 sm:p-7 rounded-3xl border shadow-xs space-y-5 ${
-            darkMode ? "bg-neutral-900/90 border-neutral-800" : "bg-white border-neutral-200"
+          className={`p-5 rounded-xl border space-y-4 ${
+            darkMode ? "bg-neutral-900 border-neutral-800" : "bg-white border-neutral-200"
           }`}
         >
           <div className="border-b border-neutral-200 dark:border-neutral-800 pb-3">
-            <h3 className="text-sm font-bold flex items-center gap-2">
-              <FiServer className="text-indigo-500" /> Connection & Environment Status
+            <h3 className="text-xs font-bold flex items-center gap-2 text-neutral-900 dark:text-white">
+              <FiServer className="text-indigo-500" /> Connection & Environment
             </h3>
-            <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
-              Current API host and database connection.
-            </p>
           </div>
 
-          <div className="space-y-3 font-mono text-xs">
+          <div className="space-y-2 font-mono text-xs">
             <div
-              className={`p-4 rounded-2xl border flex items-center justify-between ${
-                darkMode ? "bg-neutral-950 border-neutral-800" : "bg-neutral-50 border-neutral-200"
+              className={`p-3 rounded-xl border flex items-center justify-between ${
+                darkMode ? "bg-neutral-950 border-neutral-800 text-neutral-300" : "bg-neutral-50 border-neutral-200 text-neutral-700"
               }`}
             >
-              <span className="text-neutral-400">Backend API URL:</span>
-              <span className="text-indigo-500 font-bold">{import.meta.env.API_BASE_URL || "http://localhost:5001"}</span>
+              <span className="text-neutral-400 font-sans text-xs">API URL</span>
+              <span className="text-indigo-500 font-semibold">{import.meta.env.API_BASE_URL || "http://localhost:5001"}</span>
             </div>
 
             <div
-              className={`p-4 rounded-2xl border flex items-center justify-between ${
-                darkMode ? "bg-neutral-950 border-neutral-800" : "bg-neutral-50 border-neutral-200"
+              className={`p-3 rounded-xl border flex items-center justify-between ${
+                darkMode ? "bg-neutral-950 border-neutral-800 text-neutral-300" : "bg-neutral-50 border-neutral-200 text-neutral-700"
               }`}
             >
-              <span className="text-neutral-400">MongoDB Database:</span>
-              <span className="text-emerald-500 font-bold">dsa_sheet (Atlas Cluster0)</span>
-            </div>
-
-            <div
-              className={`p-4 rounded-2xl border flex items-center justify-between ${
-                darkMode ? "bg-neutral-950 border-neutral-800" : "bg-neutral-50 border-neutral-200"
-              }`}
-            >
-              <span className="text-neutral-400">App Mode:</span>
-              <span className="text-neutral-300 font-semibold">{import.meta.env.MODE || "development"}</span>
+              <span className="text-neutral-400 font-sans text-xs">Database</span>
+              <span className="text-emerald-500 font-semibold">dsa_sheet</span>
             </div>
           </div>
         </div>
