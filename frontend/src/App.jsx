@@ -14,6 +14,7 @@ import {
 } from "./api";
 import ProblemCard from "./components/ProblemCard";
 import ProblemModal from "./components/ProblemModal";
+import SolutionModal from "./components/SolutionModal";
 import SettingsView from "./components/SettingsView";
 import AuthModal from "./components/AuthModal";
 import JsonEditorModal from "./components/JsonEditorModal";
@@ -74,6 +75,11 @@ export default function App() {
   const [isJsonModalOpen, setIsJsonModalOpen] = useState(false);
   const [editingProblem, setEditingProblem] = useState(null);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+
+  // Dedicated Solution Modal State
+  const [isSolutionModalOpen, setIsSolutionModalOpen] = useState(false);
+  const [activeSolutionProblem, setActiveSolutionProblem] = useState(null);
+  const [editingSolutionIndex, setEditingSolutionIndex] = useState(null);
 
   // Dark mode (default to true for high quality dark theme)
   const [darkMode, setDarkMode] = useState(() => {
@@ -201,6 +207,55 @@ export default function App() {
       loadData();
     } catch (error) {
       alert("Failed to delete problem");
+    }
+  };
+
+  // Add / Edit / Delete Solution Approach directly on Problem
+  const handleOpenAddSolution = (problem) => {
+    setActiveSolutionProblem(problem);
+    setEditingSolutionIndex(null);
+    setIsSolutionModalOpen(true);
+  };
+
+  const handleOpenEditSolution = (problem, index) => {
+    setActiveSolutionProblem(problem);
+    setEditingSolutionIndex(index);
+    setIsSolutionModalOpen(true);
+  };
+
+  const handleSaveSolution = async (solutionData) => {
+    if (!activeSolutionProblem) return;
+    try {
+      const existingSolutions = activeSolutionProblem.solutions ? [...activeSolutionProblem.solutions] : [];
+      if (editingSolutionIndex !== null && editingSolutionIndex !== undefined) {
+        existingSolutions[editingSolutionIndex] = solutionData;
+      } else {
+        existingSolutions.push(solutionData);
+      }
+
+      await updateProblem(activeSolutionProblem._id, {
+        solutions: existingSolutions,
+      });
+
+      setIsSolutionModalOpen(false);
+      setActiveSolutionProblem(null);
+      setEditingSolutionIndex(null);
+      loadData();
+    } catch (error) {
+      alert(error.message || "Failed to save solution approach");
+    }
+  };
+
+  const handleDeleteSolution = async (problem, index) => {
+    if (!window.confirm("Delete this solution approach?")) return;
+    try {
+      const updatedSolutions = problem.solutions.filter((_, i) => i !== index);
+      await updateProblem(problem._id, {
+        solutions: updatedSolutions,
+      });
+      loadData();
+    } catch (error) {
+      alert("Failed to delete solution approach");
     }
   };
 
@@ -473,6 +528,9 @@ export default function App() {
                           setIsProblemModalOpen(true);
                         }}
                         onDelete={handleDeleteProblem}
+                        onAddSolution={handleOpenAddSolution}
+                        onEditSolution={handleOpenEditSolution}
+                        onDeleteSolution={handleDeleteSolution}
                         darkMode={darkMode}
                       />
                     ))}
@@ -544,6 +602,9 @@ export default function App() {
                       setIsProblemModalOpen(true);
                     }}
                     onDelete={handleDeleteProblem}
+                    onAddSolution={handleOpenAddSolution}
+                    onEditSolution={handleOpenEditSolution}
+                    onDeleteSolution={handleDeleteSolution}
                     darkMode={darkMode}
                   />
                 ))}
@@ -584,8 +645,23 @@ export default function App() {
           setEditingProblem(null);
         }}
         onSave={handleSaveProblem}
+        onSaveNewTag={handleSaveTag}
         initialData={editingProblem}
         tags={tags}
+        darkMode={darkMode}
+      />
+
+      {/* Dedicated Solution Approach Modal */}
+      <SolutionModal
+        isOpen={isSolutionModalOpen}
+        onClose={() => {
+          setIsSolutionModalOpen(false);
+          setActiveSolutionProblem(null);
+          setEditingSolutionIndex(null);
+        }}
+        onSaveSolution={handleSaveSolution}
+        problem={activeSolutionProblem}
+        editingSolutionIndex={editingSolutionIndex}
         darkMode={darkMode}
       />
 

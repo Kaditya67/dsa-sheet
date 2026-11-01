@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import {
   FiExternalLink,
   FiCode,
@@ -10,7 +10,10 @@ import {
   FiCpu,
   FiStar,
   FiChevronDown,
-  FiChevronUp
+  FiChevronUp,
+  FiMoreVertical,
+  FiPlus,
+  FiTag
 } from "react-icons/fi";
 
 const STATUS_COLORS = {
@@ -34,11 +37,27 @@ export default function ProblemCard({
   onToggleFavorite,
   onEdit,
   onDelete,
+  onAddSolution,
+  onEditSolution,
+  onDeleteSolution,
   darkMode,
 }) {
   const [activeTab, setActiveTab] = useState(0);
   const [copied, setCopied] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+
+  const menuRef = useRef(null);
+
+  useEffect(() => {
+    const handleOutsideClick = (e) => {
+      if (menuRef.current && !menuRef.current.contains(e.target)) {
+        setIsMenuOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleOutsideClick);
+    return () => document.removeEventListener("mousedown", handleOutsideClick);
+  }, []);
 
   const activeSolution = problem.solutions && problem.solutions[activeTab];
 
@@ -48,85 +67,99 @@ export default function ProblemCard({
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const handleLinkClick = (url) => {
+    if (!url) return;
+    window.open(url, "_blank", "noopener,noreferrer");
+  };
+
   return (
     <div
       className={`rounded-xl border transition-all duration-150 overflow-hidden shadow-xs hover:border-indigo-500/40 hover:shadow-md ${
-        darkMode ? "bg-neutral-900/90 border-neutral-800/90" : "bg-white border-neutral-200/90"
+        darkMode ? "bg-neutral-900 border-neutral-800" : "bg-white border-neutral-200"
       }`}
     >
-      {/* Compact Main Row */}
-      <div className="p-3 sm:px-4 sm:py-3 flex items-center justify-between gap-3">
-        {/* Left: Star + Title + Badges */}
-        <div className="flex items-center gap-2.5 min-w-0 flex-1">
-          <button
-            onClick={() => onToggleFavorite(problem._id)}
-            className={`p-1 rounded-md transition shrink-0 ${
-              problem.isFavorite
-                ? "text-amber-500"
-                : "text-neutral-300 dark:text-neutral-700 hover:text-amber-500"
-            }`}
-            title="Bookmark"
-          >
-            <FiStar className={`w-3.5 h-3.5 ${problem.isFavorite ? "fill-amber-500" : ""}`} />
-          </button>
+      {/* Main Problem Header Row */}
+      <div className="p-3 sm:px-4 sm:py-3 flex items-start sm:items-center justify-between gap-3">
+        {/* Left Column: Star + Title + Interactive Tags below */}
+        <div className="flex-1 min-w-0 space-y-1.5">
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* Bookmark */}
+            <button
+              onClick={() => onToggleFavorite(problem._id)}
+              className={`p-1 rounded-md transition shrink-0 ${
+                problem.isFavorite
+                  ? "text-amber-500"
+                  : "text-neutral-400 hover:text-amber-500"
+              }`}
+              title="Bookmark"
+            >
+              <FiStar className={`w-3.5 h-3.5 ${problem.isFavorite ? "fill-amber-500" : ""}`} />
+            </button>
 
-          {/* Difficulty pill */}
-          <span
-            className={`text-[9px] font-bold px-1.5 py-0.5 rounded border uppercase tracking-wider shrink-0 ${
-              DIFFICULTY_COLORS[problem.difficulty]
-            }`}
-          >
-            {problem.difficulty}
-          </span>
+            {/* Difficulty Badge */}
+            <span
+              className={`text-[9px] font-bold px-1.5 py-0.5 rounded border uppercase tracking-wider shrink-0 ${
+                DIFFICULTY_COLORS[problem.difficulty]
+              }`}
+            >
+              {problem.difficulty}
+            </span>
 
-          {/* Title */}
-          <h3
-            onClick={() => setIsExpanded(!isExpanded)}
-            className="text-xs font-bold tracking-tight text-neutral-900 dark:text-white truncate cursor-pointer hover:text-indigo-500 transition"
-            title={problem.title}
-          >
-            {problem.title}
-          </h3>
+            {/* Problem Title (Opens/Closes Solution Viewer) */}
+            <h3
+              onClick={() => setIsExpanded(!isExpanded)}
+              className="text-xs font-bold tracking-tight text-neutral-900 dark:text-white truncate cursor-pointer hover:text-indigo-500 transition"
+              title="Click to view solutions & notes"
+            >
+              {problem.title}
+            </h3>
 
-          {/* Tags (zoom-out compact) */}
+            {/* Multiple Platform Direct Links Icons */}
+            {problem.links && problem.links.length > 0 && (
+              <div className="flex items-center gap-1 shrink-0 ml-1">
+                {problem.links.map((link, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => handleLinkClick(link.url)}
+                    className="p-1 rounded text-indigo-500 hover:text-indigo-400 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition flex items-center gap-1 text-[11px] font-medium"
+                    title={`Open in ${link.platform}: ${link.url}`}
+                  >
+                    <span>{link.label || link.platform}</span>
+                    <FiExternalLink className="w-2.5 h-2.5" />
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Description line if any */}
+          {problem.description && (
+            <p className="text-[11px] text-neutral-500 dark:text-neutral-400 truncate pl-6">
+              {problem.description}
+            </p>
+          )}
+
+          {/* Tags Mentioned Just Below Problem (Clicking navigates to link or filters) */}
           {problem.tags && problem.tags.length > 0 && (
-            <div className="hidden md:flex items-center gap-1 shrink-0">
-              {problem.tags.slice(0, 3).map((tag) => (
+            <div className="flex items-center gap-1.5 flex-wrap pl-6 pt-0.5">
+              {problem.tags.map((tag) => (
                 <span
                   key={tag._id}
                   style={{ backgroundColor: `${tag.color}15`, borderColor: `${tag.color}35`, color: tag.color }}
-                  className="text-[9px] font-semibold px-1.5 py-0.2 rounded border truncate max-w-[110px]"
+                  className="text-[9px] font-medium px-1.5 py-0.5 rounded border flex items-center gap-1 select-none"
                 >
-                  {tag.name}
+                  <FiTag className="w-2.5 h-2.5" />
+                  <span>{tag.name}</span>
                 </span>
-              ))}
-              {problem.tags.length > 3 && (
-                <span className="text-[9px] text-neutral-400 font-medium">+{problem.tags.length - 3}</span>
-              )}
-            </div>
-          )}
-
-          {/* Links icons */}
-          {problem.links && problem.links.length > 0 && (
-            <div className="hidden lg:flex items-center gap-1 shrink-0">
-              {problem.links.map((link, idx) => (
-                <a
-                  key={idx}
-                  href={link.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="p-1 rounded text-indigo-500 hover:text-indigo-400 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition"
-                  title={`${link.platform}: ${link.url}`}
-                >
-                  <FiExternalLink className="w-3 h-3" />
-                </a>
               ))}
             </div>
           )}
         </div>
 
-        {/* Right: Status selector + Quick controls */}
+        {/* Right Column: Status + Solution Drawer Pill + Three Dots Actions */}
         <div className="flex items-center gap-2 shrink-0">
+          {/* Status Dropdown */}
           <select
             value={problem.status}
             onChange={(e) => onStatusChange(problem._id, e.target.value)}
@@ -141,119 +174,190 @@ export default function ProblemCard({
             ))}
           </select>
 
-          {problem.solutions && problem.solutions.length > 0 && (
+          {/* Solutions Toggle Button / Quick Count */}
+          <button
+            onClick={() => setIsExpanded(!isExpanded)}
+            className={`text-[10px] px-2 py-1 rounded-md border font-semibold transition flex items-center gap-1 ${
+              isExpanded
+                ? "bg-indigo-600 text-white border-indigo-600"
+                : darkMode
+                ? "bg-neutral-950 border-neutral-800 text-neutral-300 hover:border-neutral-700"
+                : "bg-neutral-50 border-neutral-200 text-neutral-700 hover:border-neutral-300"
+            }`}
+            title="View or add solutions"
+          >
+            <FiCode className="w-3 h-3 text-indigo-400" />
+            <span>{problem.solutions?.length || 0}</span>
+            {isExpanded ? <FiChevronUp className="w-3 h-3" /> : <FiChevronDown className="w-3 h-3" />}
+          </button>
+
+          {/* Three-dots Menu for Problem & Add Solution */}
+          <div className="relative" ref={menuRef}>
             <button
-              onClick={() => setIsExpanded(!isExpanded)}
-              className="text-[10px] px-2 py-0.5 rounded-md bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300 font-semibold hover:bg-indigo-600 hover:text-white transition flex items-center gap-1"
+              onClick={() => setIsMenuOpen(!isMenuOpen)}
+              className="p-1 rounded-md text-neutral-400 hover:text-white hover:bg-neutral-800 transition"
+              title="Options"
             >
-              <FiCode className="w-3 h-3" />
-              <span>{problem.solutions.length}</span>
-              {isExpanded ? <FiChevronUp className="w-3 h-3" /> : <FiChevronDown className="w-3 h-3" />}
+              <FiMoreVertical className="w-3.5 h-3.5" />
             </button>
-          )}
 
-          <button
-            onClick={() => onEdit(problem)}
-            className="p-1 text-neutral-400 hover:text-indigo-500 transition"
-            title="Edit"
-          >
-            <FiEdit className="w-3 h-3" />
-          </button>
+            {isMenuOpen && (
+              <div
+                className={`absolute right-0 top-full mt-1 z-30 w-36 rounded-xl border shadow-xl p-1 space-y-0.5 text-xs ${
+                  darkMode ? "bg-neutral-950 border-neutral-800 text-white" : "bg-white border-neutral-200 text-neutral-900"
+                }`}
+              >
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsMenuOpen(false);
+                    onAddSolution(problem);
+                  }}
+                  className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-indigo-500 font-semibold hover:bg-indigo-500/10 text-left transition"
+                >
+                  <FiPlus className="w-3 h-3" />
+                  <span>Add Solution</span>
+                </button>
 
-          <button
-            onClick={() => onDelete(problem._id)}
-            className="p-1 text-neutral-400 hover:text-rose-500 transition"
-            title="Delete"
-          >
-            <FiTrash2 className="w-3 h-3" />
-          </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsMenuOpen(false);
+                    onEdit(problem);
+                  }}
+                  className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-900 text-left transition text-neutral-300"
+                >
+                  <FiEdit className="w-3 h-3" />
+                  <span>Edit Problem</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsMenuOpen(false);
+                    onDelete(problem._id);
+                  }}
+                  className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-rose-500 hover:bg-rose-500/10 text-left transition"
+                >
+                  <FiTrash2 className="w-3 h-3" />
+                  <span>Delete</span>
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
-      {/* Expanded Accordion: Code approaches & Personal Notes */}
+      {/* Compressed Accordion: Multi-Solutions Viewer & Quick Add Button */}
       {isExpanded && (
-        <div className={`border-t p-3 space-y-3 ${darkMode ? "border-neutral-800 bg-neutral-950/60" : "border-neutral-100 bg-neutral-50/70"}`}>
-          {/* External links for mobile or smaller view */}
-          {problem.links && problem.links.length > 0 && (
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-[10px] text-neutral-400 uppercase font-bold">Platform Links:</span>
-              {problem.links.map((link, idx) => (
-                <a
-                  key={idx}
-                  href={link.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-[10px] font-medium text-indigo-500 hover:underline inline-flex items-center gap-1"
-                >
-                  <span>{link.label || link.platform}</span>
-                  <FiExternalLink className="w-2.5 h-2.5" />
-                </a>
-              ))}
+        <div className={`border-t p-3.5 space-y-3 ${darkMode ? "border-neutral-800 bg-neutral-950/70" : "border-neutral-100 bg-neutral-50/70"}`}>
+          {/* Header Bar of Solution Drawer: Approaches Tabs + Add Approach Button */}
+          <div className="flex items-center justify-between border-b border-neutral-200 dark:border-neutral-800 pb-2 flex-wrap gap-2">
+            <div className="flex items-center gap-1.5 overflow-x-auto">
+              {problem.solutions && problem.solutions.length > 0 ? (
+                problem.solutions.map((sol, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => setActiveTab(idx)}
+                    className={`text-[10px] px-2.5 py-1 rounded-lg font-semibold transition ${
+                      activeTab === idx
+                        ? "bg-indigo-600 text-white shadow-xs"
+                        : darkMode
+                        ? "text-neutral-400 hover:text-white hover:bg-neutral-900"
+                        : "text-neutral-600 hover:text-neutral-900 hover:bg-neutral-200"
+                    }`}
+                  >
+                    {sol.title || `Approach ${idx + 1}`}
+                  </button>
+                ))
+              ) : (
+                <span className="text-[11px] text-neutral-400 italic">No solution code added yet.</span>
+              )}
             </div>
-          )}
 
-          {/* Notes */}
-          {problem.personalNotes && (
-            <div className={`p-2.5 rounded-lg border text-xs ${darkMode ? "bg-neutral-900 border-neutral-800 text-neutral-300" : "bg-white border-neutral-200 text-neutral-700"}`}>
-              <span className="text-[9px] uppercase font-bold text-neutral-400 block mb-0.5">Key Intuition & Edge Cases:</span>
-              <p className="whitespace-pre-wrap">{problem.personalNotes}</p>
-            </div>
-          )}
-
-          {/* Solution Tabs */}
-          {problem.solutions && problem.solutions.length > 0 && (
-            <div className="space-y-2">
-              <div className="flex items-center justify-between border-b border-neutral-200 dark:border-neutral-800 pb-1.5">
-                <div className="flex items-center gap-1 overflow-x-auto">
-                  {problem.solutions.map((sol, idx) => (
-                    <button
-                      key={idx}
-                      onClick={() => setActiveTab(idx)}
-                      className={`text-[10px] px-2.5 py-0.5 rounded font-semibold transition ${
-                        activeTab === idx
-                          ? "bg-indigo-600 text-white"
-                          : "text-neutral-400 hover:text-white"
-                      }`}
-                    >
-                      {sol.title || `Solution ${idx + 1}`}
-                    </button>
-                  ))}
-                </div>
-
-                <button
-                  onClick={() => handleCopyCode(activeSolution.code)}
-                  className="text-[10px] px-2 py-0.5 rounded bg-neutral-200 dark:bg-neutral-800 hover:bg-neutral-300 dark:hover:bg-neutral-700 font-semibold inline-flex items-center gap-1"
-                >
-                  {copied ? <FiCheck className="w-2.5 h-2.5 text-emerald-500" /> : <FiCopy className="w-2.5 h-2.5" />}
-                  <span>{copied ? "Copied" : "Copy Code"}</span>
-                </button>
-              </div>
+            <div className="flex items-center gap-2">
+              {/* Add Solution button */}
+              <button
+                onClick={() => onAddSolution(problem)}
+                className="text-[10px] font-semibold px-2 py-1 rounded-md bg-indigo-600 text-white hover:bg-indigo-500 transition shadow-xs flex items-center gap-1"
+              >
+                <FiPlus className="w-3 h-3" />
+                <span>Add Solution</span>
+              </button>
 
               {activeSolution && (
-                <div className="space-y-1.5">
-                  <div className="flex items-center gap-3 text-[10px] text-neutral-400 font-mono">
-                    <span className="uppercase font-bold text-neutral-300">{activeSolution.language}</span>
-                    {activeSolution.timeComplexity && (
-                      <span className="inline-flex items-center gap-1">
-                        <FiClock className="w-2.5 h-2.5" /> {activeSolution.timeComplexity}
-                      </span>
-                    )}
-                    {activeSolution.spaceComplexity && (
-                      <span className="inline-flex items-center gap-1">
-                        <FiCpu className="w-2.5 h-2.5" /> {activeSolution.spaceComplexity}
-                      </span>
-                    )}
-                  </div>
+                <>
+                  <button
+                    onClick={() => onEditSolution(problem, activeTab)}
+                    className="p-1 rounded text-neutral-400 hover:text-white hover:bg-neutral-800 transition"
+                    title="Edit this approach"
+                  >
+                    <FiEdit className="w-3 h-3" />
+                  </button>
 
-                  {activeSolution.explanation && (
-                    <p className="text-[11px] text-neutral-400 italic">💡 {activeSolution.explanation}</p>
+                  {onDeleteSolution && (
+                    <button
+                      onClick={() => onDeleteSolution(problem, activeTab)}
+                      className="p-1 rounded text-neutral-400 hover:text-rose-500 transition"
+                      title="Delete this approach"
+                    >
+                      <FiTrash2 className="w-3 h-3" />
+                    </button>
                   )}
 
-                  <pre className="p-3 rounded-lg bg-neutral-950 border border-neutral-800 text-neutral-200 text-xs font-mono overflow-x-auto max-h-64">
-                    <code>{activeSolution.code}</code>
-                  </pre>
+                  <button
+                    onClick={() => handleCopyCode(activeSolution.code)}
+                    className="text-[10px] px-2 py-1 rounded bg-neutral-200 dark:bg-neutral-800 hover:bg-neutral-300 dark:hover:bg-neutral-700 font-semibold inline-flex items-center gap-1"
+                  >
+                    {copied ? <FiCheck className="w-2.5 h-2.5 text-emerald-500" /> : <FiCopy className="w-2.5 h-2.5" />}
+                    <span>{copied ? "Copied" : "Copy"}</span>
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+
+          {/* Active Solution Code & Intuition View */}
+          {activeSolution ? (
+            <div className="space-y-2">
+              <div className="flex items-center gap-3 text-[10px] text-neutral-400 font-mono">
+                <span className="uppercase font-bold text-indigo-400 bg-indigo-500/10 px-1.5 py-0.2 rounded border border-indigo-500/20">
+                  {activeSolution.language}
+                </span>
+
+                {activeSolution.timeComplexity && (
+                  <span className="inline-flex items-center gap-1">
+                    <FiClock className="w-2.5 h-2.5" /> Time: {activeSolution.timeComplexity}
+                  </span>
+                )}
+
+                {activeSolution.spaceComplexity && (
+                  <span className="inline-flex items-center gap-1">
+                    <FiCpu className="w-2.5 h-2.5" /> Space: {activeSolution.spaceComplexity}
+                  </span>
+                )}
+              </div>
+
+              {activeSolution.explanation && (
+                <div className="text-[11px] text-neutral-300 bg-neutral-900/60 p-2 rounded-lg border border-neutral-800">
+                  <span className="font-semibold text-neutral-400">Intuition: </span>
+                  <span>{activeSolution.explanation}</span>
                 </div>
               )}
+
+              <pre className="p-3 rounded-xl bg-neutral-950 border border-neutral-800 text-neutral-200 text-xs font-mono overflow-x-auto max-h-72">
+                <code>{activeSolution.code}</code>
+              </pre>
+            </div>
+          ) : (
+            <div className="text-center py-5">
+              <p className="text-xs text-neutral-400 mb-2">No approaches saved for this problem.</p>
+              <button
+                onClick={() => onAddSolution(problem)}
+                className="px-3 py-1 rounded-lg text-xs font-semibold bg-indigo-600 text-white hover:bg-indigo-500 transition"
+              >
+                + Add First Solution Approach
+              </button>
             </div>
           )}
         </div>

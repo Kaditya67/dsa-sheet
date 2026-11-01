@@ -1,32 +1,31 @@
-import { useState } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import {
   FiX,
   FiPlus,
-  FiTrash2,
   FiExternalLink,
+  FiTrash2,
   FiCode,
   FiTag,
-  FiBookOpen,
   FiClock,
-  FiCpu
+  FiCpu,
+  FiChevronDown,
+  FiSearch,
+  FiCheck,
+  FiBookOpen
 } from "react-icons/fi";
 
 const PLATFORMS = ["LeetCode", "GeeksforGeeks", "Codeforces", "CodeChef", "HackerRank", "YouTube", "Other"];
 const STATUSES = ["Todo", "Attempted", "Understood", "Solved", "Must Revise", "Mastered"];
 const DIFFICULTIES = ["Easy", "Medium", "Hard"];
-const LANGUAGES = [
-  { value: "cpp", label: "C++" },
-  { value: "python", label: "Python" },
-  { value: "java", label: "Java" },
-  { value: "javascript", label: "JavaScript" },
-  { value: "go", label: "Go" },
-];
+const PARENT_GROUPS = ["Data Structures", "Algorithms", "Companies", "Custom Lists", "None"];
 
-export default function ProblemModal({ isOpen, onClose, onSave, initialData, tags, darkMode }) {
+export default function ProblemModal({ isOpen, onClose, onSave, onSaveNewTag, initialData, tags, darkMode }) {
   const [title, setTitle] = useState(initialData?.title || "");
+  const [description, setDescription] = useState(initialData?.description || "");
   const [difficulty, setDifficulty] = useState(initialData?.difficulty || "Medium");
   const [status, setStatus] = useState(initialData?.status || "Todo");
   const [isFavorite, setIsFavorite] = useState(initialData?.isFavorite || false);
+
   const [selectedTagIds, setSelectedTagIds] = useState(
     initialData?.tags ? initialData.tags.map((t) => (typeof t === "object" ? t._id : t)) : []
   );
@@ -37,73 +36,90 @@ export default function ProblemModal({ isOpen, onClose, onSave, initialData, tag
       : [{ platform: "LeetCode", url: "", label: "" }]
   );
 
-  const [solutions, setSolutions] = useState(
-    initialData?.solutions && initialData.solutions.length > 0
-      ? initialData.solutions
-      : [
-          {
-            title: "Optimal Approach",
-            language: "cpp",
-            code: "",
-            timeComplexity: "O(N)",
-            spaceComplexity: "O(1)",
-            explanation: "",
-          },
-        ]
-  );
+  // Dedicated Tag Dropdown states
+  const [isTagDropdownOpen, setIsTagDropdownOpen] = useState(false);
+  const [tagSearch, setTagSearch] = useState("");
+  const [selectedParentFilter, setSelectedParentFilter] = useState("All"); // 'All' | ParentGroup
+  const [isCreatingTag, setIsCreatingTag] = useState(false);
+  const [newTagName, setNewTagName] = useState("");
+  const [newTagGroup, setNewTagGroup] = useState("Data Structures");
 
-  const [personalNotes, setPersonalNotes] = useState(initialData?.personalNotes || "");
-  const [activeSolutionTab, setActiveSolutionTab] = useState(0);
+  const tagDropdownRef = useRef(null);
+
+  // Close tag dropdown on click outside
+  useEffect(() => {
+    const handleOutsideClick = (e) => {
+      if (tagDropdownRef.current && !tagDropdownRef.current.contains(e.target)) {
+        setIsTagDropdownOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleOutsideClick);
+    return () => document.removeEventListener("mousedown", handleOutsideClick);
+  }, []);
 
   if (!isOpen) return null;
 
-  // Link helpers
+  // Group tags by parentGroup
+  const parentGroupsList = useMemo(() => {
+    const groups = new Set();
+    tags.forEach((t) => {
+      if (t.parentGroup) groups.add(t.parentGroup);
+    });
+    return Array.from(groups);
+  }, [tags]);
+
+  // Filtered tags for dropdown
+  const filteredTags = useMemo(() => {
+    return tags.filter((t) => {
+      const matchSearch = t.name.toLowerCase().includes(tagSearch.toLowerCase().trim());
+      const matchParent =
+        selectedParentFilter === "All"
+          ? true
+          : selectedParentFilter === "None"
+          ? !t.parentGroup
+          : t.parentGroup === selectedParentFilter;
+      return matchSearch && matchParent;
+    });
+  }, [tags, tagSearch, selectedParentFilter]);
+
+  // Tag helpers
+  const handleToggleTag = (tagId) => {
+    setSelectedTagIds((prev) =>
+      prev.includes(tagId) ? prev.filter((id) => id !== tagId) : [...prev, tagId]
+    );
+  };
+
+  const handleCreateNewTag = async (e) => {
+    e.preventDefault();
+    if (!newTagName.trim()) return;
+    try {
+      if (onSaveNewTag) {
+        await onSaveNewTag({
+          name: newTagName.trim(),
+          parentGroup: newTagGroup === "None" ? null : newTagGroup,
+          color: "#6366f1",
+        });
+      }
+      setNewTagName("");
+      setIsCreatingTag(false);
+    } catch (err) {
+      alert("Failed to create tag: " + err.message);
+    }
+  };
+
+  // Links helpers
   const handleAddLink = () => {
     setLinks([...links, { platform: "LeetCode", url: "", label: "" }]);
   };
+
   const handleRemoveLink = (idx) => {
     setLinks(links.filter((_, i) => i !== idx));
   };
+
   const handleLinkChange = (idx, field, value) => {
     const updated = [...links];
     updated[idx] = { ...updated[idx], [field]: value };
     setLinks(updated);
-  };
-
-  // Solution helpers
-  const handleAddSolution = () => {
-    const newIdx = solutions.length;
-    setSolutions([
-      ...solutions,
-      {
-        title: `Approach ${newIdx + 1}`,
-        language: "cpp",
-        code: "",
-        timeComplexity: "",
-        spaceComplexity: "",
-        explanation: "",
-      },
-    ]);
-    setActiveSolutionTab(newIdx);
-  };
-
-  const handleRemoveSolution = (idx) => {
-    if (solutions.length === 1) return;
-    const updated = solutions.filter((_, i) => i !== idx);
-    setSolutions(updated);
-    setActiveSolutionTab(Math.max(0, idx - 1));
-  };
-
-  const handleSolutionChange = (idx, field, value) => {
-    const updated = [...solutions];
-    updated[idx] = { ...updated[idx], [field]: value };
-    setSolutions(updated);
-  };
-
-  const toggleTag = (tagId) => {
-    setSelectedTagIds((prev) =>
-      prev.includes(tagId) ? prev.filter((id) => id !== tagId) : [...prev, tagId]
-    );
   };
 
   const handleSubmit = (e) => {
@@ -111,82 +127,85 @@ export default function ProblemModal({ isOpen, onClose, onSave, initialData, tag
     if (!title.trim()) return alert("Please enter problem title");
 
     const cleanedLinks = links.filter((l) => l.url && l.url.trim());
-    const cleanedSolutions = solutions.filter((s) => s.code && s.code.trim());
 
     onSave({
-      title,
+      title: title.trim(),
+      description: description.trim(),
       difficulty,
       status,
       isFavorite,
       tags: selectedTagIds,
       links: cleanedLinks,
-      solutions: cleanedSolutions,
-      personalNotes,
+      solutions: initialData?.solutions || [],
+      personalNotes: initialData?.personalNotes || "",
     });
   };
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/80 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/70 backdrop-blur-xs"
       onClick={onClose}
     >
       <div
-        className={`relative w-full max-w-4xl max-h-[92vh] flex flex-col rounded-2xl border shadow-2xl overflow-hidden ${
+        className={`relative w-full max-w-xl max-h-[90vh] flex flex-col rounded-2xl border shadow-2xl overflow-hidden transition-all ${
           darkMode ? "bg-neutral-900 border-neutral-800 text-white" : "bg-white border-neutral-200 text-neutral-900"
         }`}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Modal Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-200 dark:border-neutral-800">
-          <div className="flex items-center gap-3">
-            <span className="p-2 rounded-xl bg-indigo-50 dark:bg-neutral-800 text-indigo-600 dark:text-indigo-400">
-              <FiBookOpen className="w-5 h-5" />
-            </span>
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 py-3.5 border-b border-neutral-200 dark:border-neutral-800">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-indigo-600/10 border border-indigo-500/20 text-indigo-500 flex items-center justify-center">
+              <FiBookOpen className="w-4 h-4" />
+            </div>
             <div>
-              <h2 className="text-base font-bold">{initialData ? "Edit DSA Problem" : "Add New DSA Problem"}</h2>
-              <p className="text-xs text-neutral-500 dark:text-neutral-400">
-                Record solutions, platforms, patterns, and notes
-              </p>
+              <h2 className="text-sm font-bold tracking-tight">
+                {initialData ? "Edit Problem" : "Add New Problem"}
+              </h2>
             </div>
           </div>
 
           <button
             onClick={onClose}
-            className="p-2 rounded-xl hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-400 hover:text-neutral-900 dark:hover:text-white"
+            className="p-1.5 rounded-lg text-neutral-400 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800 transition"
           >
-            <FiX className="w-5 h-5" />
+            <FiX className="w-4 h-4" />
           </button>
         </div>
 
-        {/* Modal Body */}
-        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-6">
-          {/* Section 1: Basic Info */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="md:col-span-2 space-y-1">
-              <label className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">Problem Title *</label>
+        {/* Form Body */}
+        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-5 space-y-4">
+          {/* Title & Difficulty */}
+          <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+            <div className="sm:col-span-3 space-y-1">
+              <label className="text-[11px] font-semibold text-neutral-700 dark:text-neutral-300">
+                Problem Title *
+              </label>
               <input
                 type="text"
                 required
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                placeholder="e.g. Trapping Rain Water, 3Sum, Course Schedule"
-                className={`w-full px-3.5 py-2 rounded-xl text-xs border outline-none font-medium ${
+                placeholder="e.g. Trapping Rain Water, Two Sum"
+                className={`w-full px-3 py-2 rounded-xl text-xs border outline-none font-medium transition ${
                   darkMode
                     ? "bg-neutral-950 border-neutral-800 text-white focus:border-indigo-500"
-                    : "bg-neutral-50 border-neutral-300 text-neutral-900 focus:border-indigo-500"
+                    : "bg-neutral-50 border-neutral-200 text-neutral-900 focus:border-indigo-500"
                 }`}
               />
             </div>
 
             <div className="space-y-1">
-              <label className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">Difficulty</label>
+              <label className="text-[11px] font-semibold text-neutral-700 dark:text-neutral-300">
+                Difficulty
+              </label>
               <select
                 value={difficulty}
                 onChange={(e) => setDifficulty(e.target.value)}
-                className={`w-full px-3 py-2 rounded-xl text-xs border outline-none font-medium ${
+                className={`w-full px-2.5 py-2 rounded-xl text-xs border outline-none font-medium transition ${
                   darkMode
                     ? "bg-neutral-950 border-neutral-800 text-white focus:border-indigo-500"
-                    : "bg-neutral-50 border-neutral-300 text-neutral-900 focus:border-indigo-500"
+                    : "bg-neutral-50 border-neutral-200 text-neutral-900 focus:border-indigo-500"
                 }`}
               >
                 {DIFFICULTIES.map((d) => (
@@ -198,16 +217,33 @@ export default function ProblemModal({ isOpen, onClose, onSave, initialData, tag
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-1">
-              <label className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">Status</label>
+          {/* Description */}
+          <div className="space-y-1">
+            <label className="text-[11px] font-semibold text-neutral-700 dark:text-neutral-300">
+              Description / Notes (Optional)
+            </label>
+            <textarea
+              rows={2}
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Brief description or prompt constraints..."
+              className={`w-full px-3 py-2 rounded-xl text-xs border outline-none font-medium transition ${
+                darkMode
+                  ? "bg-neutral-950 border-neutral-800 text-white placeholder-neutral-500 focus:border-indigo-500"
+                  : "bg-neutral-50 border-neutral-200 text-neutral-900 placeholder-neutral-400 focus:border-indigo-500"
+              }`}
+            />
+          </div>
+
+          {/* Status & Priority */}
+          <div className="flex items-center justify-between gap-4 pt-1">
+            <div className="flex items-center gap-2">
+              <span className="text-[11px] font-semibold text-neutral-700 dark:text-neutral-300">Status:</span>
               <select
                 value={status}
                 onChange={(e) => setStatus(e.target.value)}
-                className={`w-full px-3 py-2 rounded-xl text-xs border outline-none font-medium ${
-                  darkMode
-                    ? "bg-neutral-950 border-neutral-800 text-white focus:border-indigo-500"
-                    : "bg-neutral-50 border-neutral-300 text-neutral-900 focus:border-indigo-500"
+                className={`px-2.5 py-1.5 rounded-lg text-xs border outline-none font-medium ${
+                  darkMode ? "bg-neutral-950 border-neutral-800 text-white" : "bg-neutral-50 border-neutral-200 text-neutral-900"
                 }`}
               >
                 {STATUSES.map((s) => (
@@ -218,63 +254,32 @@ export default function ProblemModal({ isOpen, onClose, onSave, initialData, tag
               </select>
             </div>
 
-            <div className="flex items-center gap-2 pt-5">
-              <label className="flex items-center gap-2 cursor-pointer select-none text-xs font-semibold text-neutral-700 dark:text-neutral-300">
-                <input
-                  type="checkbox"
-                  checked={isFavorite}
-                  onChange={(e) => setIsFavorite(e.target.checked)}
-                  className="w-4 h-4 rounded text-indigo-600 border-neutral-300 focus:ring-indigo-500"
-                />
-                <span>⭐ Bookmark as High Priority / Favorite</span>
-              </label>
-            </div>
+            <label className="flex items-center gap-2 cursor-pointer select-none text-xs font-semibold text-neutral-700 dark:text-neutral-300">
+              <input
+                type="checkbox"
+                checked={isFavorite}
+                onChange={(e) => setIsFavorite(e.target.checked)}
+                className="w-3.5 h-3.5 rounded text-indigo-600 border-neutral-300 focus:ring-indigo-500"
+              />
+              <span>⭐ Bookmark</span>
+            </label>
           </div>
 
-          {/* Section 2: Tags & Groups */}
-          <div className="space-y-2">
+          {/* Multiple Platform Links */}
+          <div className="space-y-2 pt-2 border-t border-neutral-200 dark:border-neutral-800">
             <div className="flex items-center justify-between">
-              <label className="text-xs font-semibold text-neutral-700 dark:text-neutral-300 flex items-center gap-1.5">
-                <FiTag className="w-3.5 h-3.5 text-indigo-500" /> Topic & Pattern Tags
+              <label className="text-[11px] font-semibold text-neutral-700 dark:text-neutral-300 flex items-center gap-1.5">
+                <FiExternalLink className="w-3.5 h-3.5 text-indigo-500" />
+                <span>Problem Links</span>
               </label>
-              <span className="text-[11px] text-neutral-400">Click to attach/detach tags</span>
-            </div>
 
-            <div className="flex flex-wrap gap-1.5 max-h-36 overflow-y-auto p-2 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-neutral-50/50 dark:bg-neutral-950/50">
-              {tags.map((t) => {
-                const isSelected = selectedTagIds.includes(t._id);
-                return (
-                  <button
-                    type="button"
-                    key={t._id}
-                    onClick={() => toggleTag(t._id)}
-                    className={`px-2.5 py-1 rounded-lg text-[11px] font-medium border transition ${
-                      isSelected
-                        ? "bg-indigo-600 text-white border-indigo-600 shadow-sm"
-                        : darkMode
-                        ? "bg-neutral-900 border-neutral-800 text-neutral-300 hover:border-neutral-700"
-                        : "bg-white border-neutral-200 text-neutral-700 hover:border-neutral-300"
-                    }`}
-                  >
-                    {t.parentGroup ? `${t.parentGroup} › ${t.name}` : t.name}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Section 3: Multi-Platform Links */}
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <label className="text-xs font-semibold text-neutral-700 dark:text-neutral-300 flex items-center gap-1.5">
-                <FiExternalLink className="w-3.5 h-3.5 text-indigo-500" /> Problem Links
-              </label>
               <button
                 type="button"
                 onClick={handleAddLink}
-                className="text-xs text-indigo-600 dark:text-indigo-400 font-semibold hover:underline inline-flex items-center gap-1"
+                className="text-xs text-indigo-500 hover:text-indigo-400 font-semibold inline-flex items-center gap-1"
               >
-                <FiPlus className="w-3.5 h-3.5" /> Add Link
+                <FiPlus className="w-3.5 h-3.5" />
+                <span>Add Link</span>
               </button>
             </div>
 
@@ -284,8 +289,8 @@ export default function ProblemModal({ isOpen, onClose, onSave, initialData, tag
                   <select
                     value={link.platform}
                     onChange={(e) => handleLinkChange(idx, "platform", e.target.value)}
-                    className={`w-36 px-2.5 py-1.5 rounded-xl text-xs border outline-none font-medium ${
-                      darkMode ? "bg-neutral-950 border-neutral-800 text-white" : "bg-neutral-50 border-neutral-300 text-neutral-900"
+                    className={`w-28 sm:w-32 px-2.5 py-1.5 rounded-xl text-xs border outline-none font-medium shrink-0 ${
+                      darkMode ? "bg-neutral-950 border-neutral-800 text-white" : "bg-neutral-50 border-neutral-200 text-neutral-900"
                     }`}
                   >
                     {PLATFORMS.map((p) => (
@@ -294,29 +299,23 @@ export default function ProblemModal({ isOpen, onClose, onSave, initialData, tag
                       </option>
                     ))}
                   </select>
+
                   <input
                     type="url"
                     value={link.url}
                     onChange={(e) => handleLinkChange(idx, "url", e.target.value)}
                     placeholder="https://leetcode.com/problems/..."
                     className={`flex-1 px-3 py-1.5 rounded-xl text-xs border outline-none font-medium ${
-                      darkMode ? "bg-neutral-950 border-neutral-800 text-white" : "bg-neutral-50 border-neutral-300 text-neutral-900"
+                      darkMode ? "bg-neutral-950 border-neutral-800 text-white" : "bg-neutral-50 border-neutral-200 text-neutral-900"
                     }`}
                   />
-                  <input
-                    type="text"
-                    value={link.label}
-                    onChange={(e) => handleLinkChange(idx, "label", e.target.value)}
-                    placeholder="Label (optional)"
-                    className={`w-32 px-2.5 py-1.5 rounded-xl text-xs border outline-none font-medium hidden sm:block ${
-                      darkMode ? "bg-neutral-950 border-neutral-800 text-white" : "bg-neutral-50 border-neutral-300 text-neutral-900"
-                    }`}
-                  />
+
                   {links.length > 1 && (
                     <button
                       type="button"
                       onClick={() => handleRemoveLink(idx)}
-                      className="p-2 text-red-500 hover:text-red-600"
+                      className="p-1.5 text-neutral-400 hover:text-rose-500 transition"
+                      title="Remove Link"
                     >
                       <FiTrash2 className="w-3.5 h-3.5" />
                     </button>
@@ -326,161 +325,220 @@ export default function ProblemModal({ isOpen, onClose, onSave, initialData, tag
             </div>
           </div>
 
-          {/* Section 4: Multi-Approach Solutions */}
-          <div className="space-y-3 pt-2 border-t border-neutral-200 dark:border-neutral-800">
+          {/* Clean Compact Hierarchical Tag Selector Dropdown */}
+          <div className="space-y-2 pt-2 border-t border-neutral-200 dark:border-neutral-800" ref={tagDropdownRef}>
             <div className="flex items-center justify-between">
-              <label className="text-xs font-semibold text-neutral-700 dark:text-neutral-300 flex items-center gap-1.5">
-                <FiCode className="w-3.5 h-3.5 text-indigo-500" /> Solution Code Approaches
+              <label className="text-[11px] font-semibold text-neutral-700 dark:text-neutral-300 flex items-center gap-1.5">
+                <FiTag className="w-3.5 h-3.5 text-indigo-500" />
+                <span>Attached Tags ({selectedTagIds.length})</span>
               </label>
+
               <button
                 type="button"
-                onClick={handleAddSolution}
-                className="text-xs text-indigo-600 dark:text-indigo-400 font-semibold hover:underline inline-flex items-center gap-1"
+                onClick={() => setIsTagDropdownOpen(!isTagDropdownOpen)}
+                className="text-xs text-indigo-500 hover:text-indigo-400 font-semibold inline-flex items-center gap-1"
               >
-                <FiPlus className="w-3.5 h-3.5" /> Add Another Approach
+                <span>{isTagDropdownOpen ? "Close Dropdown" : "+ Assign / Create Tags"}</span>
+                <FiChevronDown className={`w-3.5 h-3.5 transition-transform ${isTagDropdownOpen ? "rotate-180" : ""}`} />
               </button>
             </div>
 
-            {/* Approach Tabs */}
-            <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
-              {solutions.map((sol, idx) => (
-                <button
-                  type="button"
-                  key={idx}
-                  onClick={() => setActiveSolutionTab(idx)}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition border shrink-0 ${
-                    activeSolutionTab === idx
-                      ? "bg-indigo-600 text-white border-indigo-600 shadow-sm"
-                      : darkMode
-                      ? "bg-neutral-950 border-neutral-800 text-neutral-400 hover:text-white"
-                      : "bg-neutral-100 border-neutral-200 text-neutral-600 hover:text-neutral-900"
-                  }`}
-                >
-                  {sol.title || `Approach ${idx + 1}`}
-                </button>
-              ))}
-            </div>
-
-            {/* Active Approach Fields */}
-            {solutions[activeSolutionTab] && (
-              <div className={`p-4 rounded-xl border space-y-3 ${darkMode ? "bg-neutral-950 border-neutral-800" : "bg-neutral-50 border-neutral-200"}`}>
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                  <div className="flex items-center gap-2 flex-1 w-full">
-                    <input
-                      type="text"
-                      value={solutions[activeSolutionTab].title}
-                      onChange={(e) => handleSolutionChange(activeSolutionTab, "title", e.target.value)}
-                      placeholder="e.g. Brute Force, Two Pointers, Monotonic Stack"
-                      className={`flex-1 px-3 py-1.5 rounded-lg text-xs border outline-none font-semibold ${
-                        darkMode ? "bg-neutral-900 border-neutral-700 text-white" : "bg-white border-neutral-300 text-neutral-900"
-                      }`}
-                    />
-                    <select
-                      value={solutions[activeSolutionTab].language}
-                      onChange={(e) => handleSolutionChange(activeSolutionTab, "language", e.target.value)}
-                      className={`px-2.5 py-1.5 rounded-lg text-xs border outline-none font-semibold ${
-                        darkMode ? "bg-neutral-900 border-neutral-700 text-white" : "bg-white border-neutral-300 text-neutral-900"
-                      }`}
+            {/* Currently selected tags pills */}
+            {selectedTagIds.length > 0 ? (
+              <div className="flex flex-wrap gap-1.5 p-2 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-neutral-50/50 dark:bg-neutral-950/50">
+                {selectedTagIds.map((id) => {
+                  const tag = tags.find((t) => t._id === id);
+                  if (!tag) return null;
+                  return (
+                    <span
+                      key={id}
+                      className="text-[11px] font-medium px-2 py-0.5 rounded-md border flex items-center gap-1.5"
+                      style={{ backgroundColor: `${tag.color}15`, borderColor: `${tag.color}35`, color: tag.color }}
                     >
-                      {LANGUAGES.map((l) => (
-                        <option key={l.value} value={l.value}>
-                          {l.label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <div className="flex items-center gap-1 text-[11px]">
-                      <FiClock className="w-3 h-3 text-neutral-400" />
-                      <input
-                        type="text"
-                        value={solutions[activeSolutionTab].timeComplexity}
-                        onChange={(e) => handleSolutionChange(activeSolutionTab, "timeComplexity", e.target.value)}
-                        placeholder="Time: O(N)"
-                        className={`w-20 px-2 py-1 rounded text-[11px] border outline-none ${
-                          darkMode ? "bg-neutral-900 border-neutral-700 text-white" : "bg-white border-neutral-300 text-neutral-900"
-                        }`}
-                      />
-                    </div>
-
-                    <div className="flex items-center gap-1 text-[11px]">
-                      <FiCpu className="w-3 h-3 text-neutral-400" />
-                      <input
-                        type="text"
-                        value={solutions[activeSolutionTab].spaceComplexity}
-                        onChange={(e) => handleSolutionChange(activeSolutionTab, "spaceComplexity", e.target.value)}
-                        placeholder="Space: O(1)"
-                        className={`w-20 px-2 py-1 rounded text-[11px] border outline-none ${
-                          darkMode ? "bg-neutral-900 border-neutral-700 text-white" : "bg-white border-neutral-300 text-neutral-900"
-                        }`}
-                      />
-                    </div>
-
-                    {solutions.length > 1 && (
+                      <span>{tag.parentGroup ? `${tag.parentGroup} › ${tag.name}` : tag.name}</span>
                       <button
                         type="button"
-                        onClick={() => handleRemoveSolution(activeSolutionTab)}
-                        className="p-1 text-red-500 hover:text-red-600"
-                        title="Delete this approach"
+                        onClick={() => handleToggleTag(id)}
+                        className="opacity-60 hover:opacity-100 hover:text-rose-500"
                       >
-                        <FiTrash2 className="w-3.5 h-3.5" />
+                        <FiX className="w-3 h-3" />
                       </button>
-                    )}
+                    </span>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="text-[11px] text-neutral-400 italic">No tags attached yet.</p>
+            )}
+
+            {/* Compact Searchable Hierarchical Dropdown Popover */}
+            {isTagDropdownOpen && (
+              <div
+                className={`p-3 rounded-2xl border shadow-xl space-y-2.5 transition-all mt-1 ${
+                  darkMode ? "bg-neutral-950 border-neutral-800" : "bg-neutral-50 border-neutral-200"
+                }`}
+              >
+                {/* Search Bar + Create Tag Toggle */}
+                <div className="flex items-center gap-2">
+                  <div className="relative flex-1">
+                    <FiSearch className="absolute left-2.5 top-1/2 -translate-y-1/2 text-neutral-400 w-3 h-3" />
+                    <input
+                      type="text"
+                      value={tagSearch}
+                      onChange={(e) => setTagSearch(e.target.value)}
+                      placeholder="Search tags..."
+                      className={`w-full pl-8 pr-2.5 py-1 rounded-lg text-xs border outline-none ${
+                        darkMode ? "bg-neutral-900 border-neutral-800 text-white" : "bg-white border-neutral-200 text-neutral-900"
+                      }`}
+                    />
                   </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setIsCreatingTag(!isCreatingTag)}
+                    className="text-[11px] font-semibold px-2.5 py-1 rounded-lg border border-indigo-500/20 bg-indigo-500/10 text-indigo-500 hover:bg-indigo-500/20 transition shrink-0"
+                  >
+                    {isCreatingTag ? "Cancel" : "+ New Tag"}
+                  </button>
                 </div>
 
-                <textarea
-                  rows={8}
-                  value={solutions[activeSolutionTab].code}
-                  onChange={(e) => handleSolutionChange(activeSolutionTab, "code", e.target.value)}
-                  placeholder="// Paste your code here..."
-                  className={`w-full p-3 rounded-lg text-xs font-mono outline-none border ${
-                    darkMode ? "bg-neutral-900 border-neutral-800 text-green-400" : "bg-white border-neutral-300 text-neutral-900"
-                  }`}
-                />
+                {/* Inline Quick Tag Creator */}
+                {isCreatingTag && (
+                  <div className={`p-2.5 rounded-xl border space-y-2 ${darkMode ? "bg-neutral-900 border-neutral-800" : "bg-white border-neutral-200"}`}>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="text-[10px] text-neutral-400 block mb-0.5">Parent Category</label>
+                        <select
+                          value={newTagGroup}
+                          onChange={(e) => setNewTagGroup(e.target.value)}
+                          className={`w-full px-2 py-1 rounded-md text-[11px] border outline-none ${
+                            darkMode ? "bg-neutral-950 border-neutral-800 text-white" : "bg-neutral-50 border-neutral-200 text-neutral-900"
+                          }`}
+                        >
+                          {PARENT_GROUPS.map((pg) => (
+                            <option key={pg} value={pg}>
+                              {pg}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
 
-                <input
-                  type="text"
-                  value={solutions[activeSolutionTab].explanation}
-                  onChange={(e) => handleSolutionChange(activeSolutionTab, "explanation", e.target.value)}
-                  placeholder="Key intuition / notes for this approach..."
-                  className={`w-full px-3 py-1.5 rounded-lg text-xs border outline-none ${
-                    darkMode ? "bg-neutral-900 border-neutral-800 text-white" : "bg-white border-neutral-300 text-neutral-900"
-                  }`}
-                />
+                      <div>
+                        <label className="text-[10px] text-neutral-400 block mb-0.5">Tag Name</label>
+                        <input
+                          type="text"
+                          value={newTagName}
+                          onChange={(e) => setNewTagName(e.target.value)}
+                          placeholder="e.g. Backtracking"
+                          className={`w-full px-2 py-1 rounded-md text-[11px] border outline-none ${
+                            darkMode ? "bg-neutral-950 border-neutral-800 text-white" : "bg-neutral-50 border-neutral-200 text-neutral-900"
+                          }`}
+                        />
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={handleCreateNewTag}
+                      className="w-full py-1 text-xs font-semibold bg-indigo-600 text-white rounded-md hover:bg-indigo-500 transition"
+                    >
+                      Save & Add Tag
+                    </button>
+                  </div>
+                )}
+
+                {/* Parent Filter Chips */}
+                <div className="flex items-center gap-1 overflow-x-auto pb-1 text-[10px]">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedParentFilter("All")}
+                    className={`px-2 py-0.5 rounded-md font-medium shrink-0 transition ${
+                      selectedParentFilter === "All"
+                        ? "bg-indigo-600 text-white"
+                        : "text-neutral-400 hover:text-white"
+                    }`}
+                  >
+                    All
+                  </button>
+                  {parentGroupsList.map((pg) => (
+                    <button
+                      type="button"
+                      key={pg}
+                      onClick={() => setSelectedParentFilter(pg)}
+                      className={`px-2 py-0.5 rounded-md font-medium shrink-0 transition ${
+                        selectedParentFilter === pg
+                          ? "bg-indigo-600 text-white"
+                          : "text-neutral-400 hover:text-white"
+                      }`}
+                    >
+                      {pg}
+                    </button>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => setSelectedParentFilter("None")}
+                    className={`px-2 py-0.5 rounded-md font-medium shrink-0 transition ${
+                      selectedParentFilter === "None"
+                        ? "bg-indigo-600 text-white"
+                        : "text-neutral-400 hover:text-white"
+                    }`}
+                  >
+                    Standalone
+                  </button>
+                </div>
+
+                {/* Tag Selection Grid */}
+                <div className="max-h-40 overflow-y-auto space-y-1 pr-1">
+                  {filteredTags.length > 0 ? (
+                    filteredTags.map((t) => {
+                      const isSelected = selectedTagIds.includes(t._id);
+                      return (
+                        <button
+                          type="button"
+                          key={t._id}
+                          onClick={() => handleToggleTag(t._id)}
+                          className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs font-medium transition text-left ${
+                            isSelected
+                              ? "bg-indigo-600 text-white"
+                              : darkMode
+                              ? "hover:bg-neutral-900 text-neutral-300"
+                              : "hover:bg-neutral-200/70 text-neutral-700"
+                          }`}
+                        >
+                          <div className="flex items-center gap-1.5 truncate">
+                            <span
+                              className="w-2 h-2 rounded-full shrink-0"
+                              style={{ backgroundColor: isSelected ? "#fff" : t.color }}
+                            />
+                            <span className="opacity-60 text-[10px]">
+                              {t.parentGroup ? `${t.parentGroup} › ` : ""}
+                            </span>
+                            <span className="truncate">{t.name}</span>
+                          </div>
+                          {isSelected && <FiCheck className="w-3.5 h-3.5 shrink-0 ml-1" />}
+                        </button>
+                      );
+                    })
+                  ) : (
+                    <p className="text-[11px] text-neutral-400 p-2 text-center">No tags match search filter.</p>
+                  )}
+                </div>
               </div>
             )}
           </div>
 
-          {/* Section 5: Tricky Edge Cases & General Notes */}
-          <div className="space-y-1 pt-2 border-t border-neutral-200 dark:border-neutral-800">
-            <label className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">
-              Tricky Test Cases, Pitfalls & Quick Revision Notes
-            </label>
-            <textarea
-              rows={3}
-              value={personalNotes}
-              onChange={(e) => setPersonalNotes(e.target.value)}
-              placeholder="e.g. Remember empty string case, negative numbers, overflow if sum exceeds INT_MAX..."
-              className={`w-full p-3 rounded-xl text-xs border outline-none font-medium ${
-                darkMode ? "bg-neutral-950 border-neutral-800 text-white" : "bg-neutral-50 border-neutral-300 text-neutral-900"
-              }`}
-            />
-          </div>
-
-          {/* Footer Submit */}
-          <div className="flex items-center justify-end gap-3 pt-4 border-t border-neutral-200 dark:border-neutral-800">
+          {/* Modal Footer */}
+          <div className="flex items-center justify-end gap-2 pt-3 border-t border-neutral-200 dark:border-neutral-800">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 rounded-xl text-xs font-semibold border border-neutral-300 dark:border-neutral-700 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition"
+              className="px-3.5 py-1.5 rounded-xl text-xs font-medium border border-neutral-200 dark:border-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="px-5 py-2 rounded-xl text-xs font-semibold bg-indigo-600 text-white hover:bg-indigo-500 transition shadow-md shadow-indigo-500/20"
+              className="px-4 py-1.5 rounded-xl text-xs font-semibold bg-indigo-600 text-white hover:bg-indigo-500 transition shadow-xs"
             >
               Save Problem
             </button>
@@ -490,4 +548,3 @@ export default function ProblemModal({ isOpen, onClose, onSave, initialData, tag
     </div>
   );
 }
-

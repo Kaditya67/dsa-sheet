@@ -84,7 +84,7 @@ router.get("/:id", protect, async (req, res) => {
 // @route POST /api/problems
 router.post("/", protect, async (req, res) => {
   try {
-    const { title, difficulty, status, links, tags, solutions, personalNotes, isFavorite } = req.body;
+    const { title, description, difficulty, status, links, tags, solutions, personalNotes, isFavorite } = req.body;
     if (!title || !title.trim()) {
       return res.status(400).json({ error: "Problem title is required" });
     }
@@ -92,6 +92,7 @@ router.post("/", protect, async (req, res) => {
     const problem = await Problem.create({
       userId: req.user._id,
       title: title.trim(),
+      description: description || "",
       difficulty: difficulty || "Medium",
       status: status || "Todo",
       links: links || [],
@@ -195,6 +196,7 @@ router.post("/bulk-sync", protect, async (req, res) => {
           : "Todo",
         isFavorite: Boolean(item.isFavorite),
         revisionCount: Number(item.revisionCount) || 0,
+        description: item.description || "",
         links: Array.isArray(item.links) ? item.links : [],
         solutions: Array.isArray(item.solutions) ? item.solutions : [],
         tags: Array.isArray(item.tags)

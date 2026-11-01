@@ -36,6 +36,9 @@ const problemSchema = new mongoose.Schema(
     // External problem links (LeetCode, GFG, YouTube, Codeforces)
     links: [linkSchema],
 
+    // Problem description / notes
+    description: { type: String, default: "" },
+
     // Hierarchical & custom tags
     tags: [{ type: mongoose.Schema.Types.ObjectId, ref: "Tag" }],
 
