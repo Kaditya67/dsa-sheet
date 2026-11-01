@@ -18,12 +18,17 @@ const SAMPLE_JSON = [
     "difficulty": "Easy",
     "status": "Solved",
     "isFavorite": true,
-    "description": "Find indices of two numbers that add up to target.",
+    "description": "Find two numbers in array that add up to target.",
     "links": [
       {
         "platform": "LeetCode",
         "url": "https://leetcode.com/problems/two-sum/",
         "label": "LC 1"
+      },
+      {
+        "platform": "GeeksforGeeks",
+        "url": "https://www.geeksforgeeks.org/key-pair-problem/",
+        "label": "GFG Key Pair"
       }
     ],
     "solutions": [
@@ -37,6 +42,36 @@ const SAMPLE_JSON = [
       }
     ],
     "personalNotes": "Edge cases: duplicate values, negative numbers."
+  },
+  {
+    "title": "Trapping Rain Water",
+    "difficulty": "Hard",
+    "status": "Must Revise",
+    "isFavorite": true,
+    "description": "Compute how much water it can trap after raining.",
+    "links": [
+      {
+        "platform": "LeetCode",
+        "url": "https://leetcode.com/problems/trapping-rain-water/",
+        "label": "LC 42"
+      },
+      {
+        "platform": "YouTube",
+        "url": "https://www.youtube.com/watch?v=m18Hntz4EB8",
+        "label": "NeetCode Video"
+      }
+    ],
+    "solutions": [
+      {
+        "title": "Two Pointers Optimal",
+        "language": "cpp",
+        "timeComplexity": "O(N)",
+        "spaceComplexity": "O(1)",
+        "explanation": "Maintain leftMax and rightMax while moving pointer with smaller boundary.",
+        "code": "int trap(vector<int>& height) {\n    int left = 0, right = height.size() - 1;\n    int leftMax = 0, rightMax = 0, total = 0;\n    while (left < right) {\n        if (height[left] <= height[right]) {\n            if (height[left] >= leftMax) leftMax = height[left];\n            else total += leftMax - height[left];\n            left++;\n        } else {\n            if (height[right] >= rightMax) rightMax = height[right];\n            else total += rightMax - height[right];\n            right--;\n        }\n    }\n    return total;\n}"
+      }
+    ],
+    "personalNotes": "Two pointer is O(1) space instead of prefix/suffix arrays O(N)."
   }
 ];
 

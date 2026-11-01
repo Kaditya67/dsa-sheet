@@ -187,6 +187,38 @@ router.post("/bulk-sync", protect, async (req, res) => {
     for (const item of problems) {
       if (!item.title || !item.title.trim()) continue;
 
+      // Smart link parser: accepts array of objects [{platform, url, label}], array of strings ["https://..."], or single string/object
+      let rawLinks = [];
+      if (Array.isArray(item.links)) {
+        rawLinks = item.links;
+      } else if (item.link) {
+        rawLinks = Array.isArray(item.link) ? item.link : [item.link];
+      } else if (item.url) {
+        rawLinks = Array.isArray(item.url) ? item.url : [item.url];
+      }
+
+      const parsedLinks = rawLinks
+        .map((l) => {
+          if (typeof l === "string" && l.trim()) {
+            const urlStr = l.trim();
+            let platform = "Other";
+            if (urlStr.includes("leetcode.com")) platform = "LeetCode";
+            else if (urlStr.includes("geeksforgeeks.org")) platform = "GeeksforGeeks";
+            else if (urlStr.includes("codeforces.com")) platform = "Codeforces";
+            else if (urlStr.includes("codechef.com")) platform = "CodeChef";
+            else if (urlStr.includes("youtube.com") || urlStr.includes("youtu.be")) platform = "YouTube";
+            return { platform, url: urlStr, label: "" };
+          } else if (typeof l === "object" && l !== null && l.url) {
+            return {
+              platform: l.platform || "Other",
+              url: l.url.trim(),
+              label: l.label || "",
+            };
+          }
+          return null;
+        })
+        .filter(Boolean);
+
       const problemData = {
         userId,
         title: item.title.trim(),
@@ -197,7 +229,7 @@ router.post("/bulk-sync", protect, async (req, res) => {
         isFavorite: Boolean(item.isFavorite),
         revisionCount: Number(item.revisionCount) || 0,
         description: item.description || "",
-        links: Array.isArray(item.links) ? item.links : [],
+        links: parsedLinks,
         solutions: Array.isArray(item.solutions) ? item.solutions : [],
         tags: Array.isArray(item.tags)
           ? item.tags.map((t) => (typeof t === "object" && t !== null && t._id ? t._id : t))
