@@ -3,10 +3,7 @@ import {
   FiX,
   FiCode,
   FiClock,
-  FiCpu,
-  FiPlus,
-  FiTrash2,
-  FiCheck
+  FiCpu
 } from "react-icons/fi";
 
 const LANGUAGES = [
@@ -252,3 +249,4 @@ export default function SolutionModal({ isOpen, onClose, onSaveSolution, problem
     </div>
   );
 }
+

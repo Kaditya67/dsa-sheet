@@ -9,8 +9,7 @@ import {
   FiEye,
   FiEyeOff,
   FiShield,
-  FiX,
-  FiCheckCircle
+  FiX
 } from "react-icons/fi";
 import { loginUser, registerUser } from "../api";
 

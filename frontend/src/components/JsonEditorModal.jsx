@@ -5,10 +5,7 @@ import {
   FiUpload,
   FiCheck,
   FiAlertTriangle,
-  FiCopy,
-  FiRotateCcw,
-  FiFileText,
-  FiHelpCircle
+  FiCopy
 } from "react-icons/fi";
 import { bulkSyncProblems } from "../api";
 
@@ -52,7 +49,19 @@ export default function JsonEditorModal({ isOpen, onClose, currentProblems, onSy
     if (isOpen) {
       if (currentProblems && currentProblems.length > 0) {
         // Strip __v and clean formatting for readable editing
-        const cleanProblems = currentProblems.map(({ __v, createdAt, updatedAt, ...rest }) => rest);
+        const cleanProblems = currentProblems.map(({ _id, title, difficulty, status, isFavorite, revisionCount, description, links, tags, solutions, personalNotes }) => ({
+          _id,
+          title,
+          difficulty,
+          status,
+          isFavorite,
+          revisionCount,
+          description,
+          links,
+          tags,
+          solutions,
+          personalNotes,
+        }));
         setJsonText(JSON.stringify(cleanProblems, null, 2));
       } else {
         setJsonText(JSON.stringify(SAMPLE_JSON, null, 2));

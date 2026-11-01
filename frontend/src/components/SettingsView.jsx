@@ -1,7 +1,6 @@
 import { useState, useMemo, useRef, useEffect } from "react";
 import {
   FiFolder,
-  FiTag,
   FiPlus,
   FiTrash2,
   FiFilter,
@@ -9,18 +8,13 @@ import {
   FiLayers,
   FiRotateCcw,
   FiSliders,
-  FiBookmark,
   FiDownload,
   FiServer,
   FiChevronDown,
   FiSearch,
   FiX,
   FiCheckCircle,
-  FiClock,
   FiStar,
-  FiDatabase,
-  FiActivity,
-  FiEdit3,
   FiCode
 } from "react-icons/fi";
 
@@ -86,9 +80,6 @@ export default function SettingsView({
   const [isTopicDropdownOpen, setIsTopicDropdownOpen] = useState(false);
   const [topicDropdownSearch, setTopicDropdownSearch] = useState("");
   const dropdownRef = useRef(null);
-
-  // Category Dropdown for new tag
-  const [isCategoryDropdownOpen, setIsCategoryDropdownOpen] = useState(false);
 
   // New tag form state
   const [newTagName, setNewTagName] = useState("");

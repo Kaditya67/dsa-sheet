@@ -29,10 +29,8 @@ import {
   FiLogOut,
   FiList,
   FiSliders,
-  FiCheckCircle,
   FiFilter,
   FiBookmark,
-  FiBarChart2,
   FiLayers,
   FiFileText
 } from "react-icons/fi";
@@ -97,31 +95,11 @@ export default function App() {
     }
   }, [darkMode]);
 
-  // Auth verify
-  useEffect(() => {
-    const token = localStorage.getItem("dsa_token");
-    if (token) {
-      getProfile()
-        .then((userData) => {
-          setUser(userData);
-          localStorage.setItem("dsa_user", JSON.stringify(userData));
-        })
-        .catch(() => {
-          handleLogout();
-        });
-    }
-  }, []);
-
-  // Fetch problems based on activeTab & filterPreset
-  useEffect(() => {
-    if (user) {
-      loadData();
-    } else {
-      setProblems([]);
-      setTags([]);
-      setStats(null);
-    }
-  }, [user, activeTab, filterPreset]);
+  const handleLogout = () => {
+    localStorage.removeItem("dsa_token");
+    localStorage.removeItem("dsa_user");
+    setUser(null);
+  };
 
   const loadData = async () => {
     setLoading(true);
@@ -153,11 +131,32 @@ export default function App() {
     }
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem("dsa_token");
-    localStorage.removeItem("dsa_user");
-    setUser(null);
-  };
+  // Auth verify
+  useEffect(() => {
+    const token = localStorage.getItem("dsa_token");
+    if (token) {
+      getProfile()
+        .then((userData) => {
+          setUser(userData);
+          localStorage.setItem("dsa_user", JSON.stringify(userData));
+        })
+        .catch(() => {
+          handleLogout();
+        });
+    }
+  }, []);
+
+  // Fetch problems based on activeTab & filterPreset
+  useEffect(() => {
+    if (user) {
+      loadData();
+    } else {
+      setProblems([]);
+      setTags([]);
+      setStats(null);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, activeTab, filterPreset]);
 
   // Save Filter Preset from Settings
   const handleApplyPreset = (newPreset) => {
